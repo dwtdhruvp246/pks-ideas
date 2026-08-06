@@ -114,6 +114,72 @@ grant select, insert, update, delete on table public.ideas to authenticated;
 revoke all on table public.ideas from anon;
 
 
+
+-- ============================================================
+-- COSTING ITEMS
+-- Each idea can have multiple monthly or yearly costs.
+-- ============================================================
+create table if not exists public.idea_costs (
+  id uuid primary key default gen_random_uuid(),
+  idea_id uuid not null references public.ideas(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null check (char_length(title) between 1 and 120),
+  cost_amount numeric(12,2) not null check (cost_amount >= 0),
+  billing_period text not null check (billing_period in ('Monthly', 'Yearly')),
+  notes text check (notes is null or char_length(notes) <= 1000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idea_costs_idea_id_idx on public.idea_costs(idea_id);
+create index if not exists idea_costs_user_id_idx on public.idea_costs(user_id);
+
+drop trigger if exists idea_costs_set_updated_at on public.idea_costs;
+create trigger idea_costs_set_updated_at
+before update on public.idea_costs
+for each row execute function public.set_updated_at();
+
+alter table public.idea_costs enable row level security;
+
+drop policy if exists "Owner can view own idea costs" on public.idea_costs;
+drop policy if exists "Owner can add own idea costs" on public.idea_costs;
+drop policy if exists "Owner can update own idea costs" on public.idea_costs;
+drop policy if exists "Owner can delete own idea costs" on public.idea_costs;
+
+create policy "Owner can view own idea costs"
+on public.idea_costs for select to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+  and exists (select 1 from public.ideas i where i.id = idea_id and i.user_id = (select auth.uid()))
+);
+
+create policy "Owner can add own idea costs"
+on public.idea_costs for insert to authenticated
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+  and exists (select 1 from public.ideas i where i.id = idea_id and i.user_id = (select auth.uid()))
+);
+
+create policy "Owner can update own idea costs"
+on public.idea_costs for update to authenticated
+using ((select auth.uid()) = user_id)
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can delete own idea costs"
+on public.idea_costs for delete to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+grant select, insert, update, delete on table public.idea_costs to authenticated;
+revoke all on table public.idea_costs from anon;
+
 -- Enable Supabase Realtime for cross-device updates.
 -- The block is safe to run repeatedly.
 do $$
