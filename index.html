@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dhruv's private website idea manager" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>IdeaVault — Personal Website Ideas</title>
+  <meta name="theme-color" content="#5b5bd6" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="IdeaVault" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --surface: #ffffff;
+      --surface-2: #f2f5fb;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #5b5bd6;
+      --primary-dark: #4545b8;
+      --danger: #dc2626;
+      --success: #15803d;
+      --warning: #b45309;
+      --shadow: 0 14px 38px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .login-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+    }
+    .login-art {
+      padding: 64px;
+      color: white;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.16), transparent 25%),
+        radial-gradient(circle at 80% 75%, rgba(255,255,255,.12), transparent 30%),
+        linear-gradient(145deg, #25256f 0%, #5b5bd6 55%, #8b5cf6 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 22px; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 13px;
+      display: grid; place-items: center;
+      background: rgba(255,255,255,.16);
+      border: 1px solid rgba(255,255,255,.25);
+      font-size: 21px;
+    }
+    .login-copy { max-width: 620px; }
+    .login-copy h1 { font-size: clamp(42px, 6vw, 78px); line-height: .98; margin: 0 0 24px; letter-spacing: -4px; }
+    .login-copy p { max-width: 550px; font-size: 18px; line-height: 1.7; color: rgba(255,255,255,.82); }
+    .login-note { color: rgba(255,255,255,.64); font-size: 13px; }
+
+    .login-panel { display: grid; place-items: center; padding: 32px; background: white; }
+    .login-card { width: min(430px, 100%); }
+    .login-card h2 { font-size: 34px; margin: 0 0 8px; letter-spacing: -1.2px; }
+    .login-card > p { color: var(--muted); margin: 0 0 32px; }
+
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #374151; }
+    .input, textarea, select {
+      width: 100%; border: 1px solid var(--border); background: white; color: var(--text);
+      border-radius: 12px; padding: 13px 14px; outline: none; transition: .18s ease;
+    }
+    .input:focus, textarea:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(91,91,214,.10); }
+    textarea { resize: vertical; min-height: 110px; }
+    .password-wrap { position: relative; }
+    .password-wrap .input { padding-right: 48px; }
+    .password-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); }
+
+    .btn {
+      border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: .55; cursor: wait; transform: none; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+    .btn-full { width: 100%; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .install-btn { background: white; color: var(--primary); border: 1px solid #d9d9ee; }
+    .install-btn:hover { background: #f5f5ff; }
+    @media (display-mode: standalone) { .install-btn { display: none !important; } }
+    .message { min-height: 22px; margin-top: 15px; font-size: 13px; }
+    .message.error { color: var(--danger); }
+    .message.success { color: var(--success); }
+
+    .app-shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh; padding: 24px 18px;
+      background: #151528; color: white; display: flex; flex-direction: column;
+    }
+    .sidebar .brand { padding: 4px 8px 28px; }
+    .nav-label { color: #7f819b; font-size: 11px; font-weight: 800; letter-spacing: .12em; padding: 10px 12px; }
+    .nav-item {
+      width: 100%; border: 0; background: transparent; color: #b9bbcd;
+      display: flex; align-items: center; gap: 11px; padding: 12px; border-radius: 11px; margin-bottom: 4px;
+      text-align: left; font-weight: 600;
+    }
+    .nav-item.active, .nav-item:hover { background: rgba(255,255,255,.09); color: white; }
+    .sidebar-bottom { margin-top: auto; }
+    .user-mini { padding: 14px 12px; margin-bottom: 10px; background: rgba(255,255,255,.06); border-radius: 13px; }
+    .user-mini strong { display: block; font-size: 13px; }
+    .user-mini span { display: block; color: #9395aa; font-size: 11px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; }
+
+    .main { min-width: 0; }
+    .topbar {
+      height: 76px; padding: 0 32px; background: rgba(255,255,255,.88); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar h1 { margin: 0; font-size: 20px; letter-spacing: -.4px; }
+    .content { padding: 32px; max-width: 1500px; margin: 0 auto; }
+
+    .hero {
+      border-radius: 24px; padding: 32px; color: white; margin-bottom: 24px;
+      background: linear-gradient(130deg, #313180, #5b5bd6 56%, #7c3aed);
+      box-shadow: var(--shadow);
+      display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    }
+    .hero h2 { font-size: 31px; margin: 0 0 9px; letter-spacing: -1.2px; }
+    .hero p { margin: 0; color: rgba(255,255,255,.78); }
+    .hero .btn { background: white; color: #343477; white-space: nowrap; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: 0 4px 14px rgba(15,23,42,.035); }
+    .stat-top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; font-weight: 600; }
+    .stat-icon { width: 37px; height: 37px; border-radius: 11px; display: grid; place-items: center; background: var(--surface-2); }
+    .stat-value { font-size: 30px; font-weight: 800; margin-top: 14px; letter-spacing: -1.2px; }
+
+    .toolbar { display: grid; grid-template-columns: minmax(260px, 1fr) 180px 180px; gap: 12px; margin-bottom: 18px; }
+    .search { position: relative; }
+    .search input { padding-left: 42px; }
+    .search span { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+
+
+    .badge { display:inline-flex; padding: 6px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; background: var(--surface-2); color: #525b6d; white-space: nowrap; }
+    .status-planning { background: #eef2ff; color: #4338ca; }
+    .status-building { background: #fff7ed; color: #c2410c; }
+    .status-launched { background: #ecfdf5; color: #047857; }
+    .status-paused { background: #f3f4f6; color: #4b5563; }
+    .icon-btn { border: 1px solid var(--border); background: white; border-radius: 9px; width: 34px; height: 34px; color: var(--muted); }
+    .icon-btn:hover { color: var(--primary); border-color: #cfcff0; }
+    .ideas-table-wrap {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: 0 4px 14px rgba(15,23,42,.035); overflow: auto;
+    }
+    .ideas-table { width: 100%; min-width: 1220px; border-collapse: separate; border-spacing: 0; }
+    .ideas-table th, .ideas-table td { padding: 14px 15px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .ideas-table th { position: sticky; top: 0; z-index: 2; background: #f8fafc; color: #4b5563; font-size: 11px; text-transform: uppercase; letter-spacing: .055em; white-space: nowrap; }
+    .ideas-table tbody tr { transition: background .15s ease; }
+    .ideas-table tbody tr:hover { background: #fafaff; }
+    .ideas-table tbody tr:last-child td { border-bottom: 0; }
+    .sort-button { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; font-weight: 800; text-transform: inherit; letter-spacing: inherit; display: inline-flex; align-items: center; gap: 6px; }
+    .sort-arrow { color: #9ca3af; font-size: 12px; min-width: 12px; }
+    .sort-button.active .sort-arrow { color: var(--primary); }
+    .title-cell { min-width: 190px; font-weight: 700; color: var(--text); }
+    .category-cell { color: var(--primary); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+    .table-link { color: var(--primary); font-weight: 700; text-decoration: none; }
+    .table-link:hover { text-decoration: underline; }
+    .notes-cell { min-width: 250px; max-width: 360px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .notes-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .date-cell { white-space: nowrap; color: #4b5563; font-size: 12px; }
+    .table-actions { display: flex; gap: 7px; white-space: nowrap; }
+    .empty-state { grid-column: 1 / -1; text-align: center; padding: 70px 30px; background: white; border: 1px dashed #cfd4dc; border-radius: var(--radius); }
+    .empty-state .big { font-size: 42px; }
+    .empty-state h3 { margin: 12px 0 7px; }
+    .empty-state p { color: var(--muted); }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 50; display: grid; place-items: center; padding: 20px; }
+    .modal { width: min(720px, 100%); max-height: 92vh; overflow: auto; background: white; border-radius: 20px; box-shadow: 0 24px 70px rgba(15,23,42,.24); }
+    .modal-head { padding: 22px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    .modal-head h2 { margin: 0; font-size: 20px; }
+    .close-btn { border: 0; background: var(--surface-2); width: 36px; height: 36px; border-radius: 10px; font-size: 18px; }
+    .modal-body { padding: 24px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .span-2 { grid-column: span 2; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 6px; }
+    .costing-section { grid-column: span 2; border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: #fafbff; }
+    .costing-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .costing-head h3 { margin: 0; font-size: 15px; }
+    .costing-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .cost-row { display: grid; grid-template-columns: minmax(140px, 1.25fr) minmax(100px, .65fr) minmax(120px, .75fr) minmax(160px, 1.3fr) 38px; gap: 10px; align-items: start; padding: 12px; margin-top: 10px; border: 1px solid var(--border); border-radius: 12px; background: white; }
+    .cost-row .field { margin: 0; }
+    .cost-row label { font-size: 11px; }
+    .cost-remove { margin-top: 26px; width: 38px; height: 38px; border: 1px solid #fecaca; border-radius: 10px; background: #fff1f2; color: var(--danger); font-weight: 800; }
+    .cost-empty { padding: 18px; text-align: center; border: 1px dashed #cfd4dc; border-radius: 12px; color: var(--muted); font-size: 13px; background: white; }
+    .mobile-menu { display: none; }
+
+    @media (max-width: 1100px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 800px) {
+      .login-shell { grid-template-columns: 1fr; }
+      .login-art { display: none; }
+      .app-shell { display: block; }
+      .sidebar { position: fixed; left: -280px; z-index: 40; width: 260px; transition: .25s ease; box-shadow: 20px 0 50px rgba(0,0,0,.2); }
+      .sidebar.open { left: 0; }
+      .mobile-menu { display: inline-grid; place-items: center; border: 1px solid var(--border); background: white; width: 40px; height: 40px; border-radius: 11px; }
+      .topbar { padding: 0 18px; }
+      .content { padding: 20px 16px; }
+      .hero { align-items: flex-start; flex-direction: column; padding: 25px; }
+    }
+    @media (max-width: 560px) {
+      .stats, .toolbar, .form-grid { grid-template-columns: 1fr; }
+      .span-2, .costing-section { grid-column: span 1; }
+      .cost-row { grid-template-columns: 1fr; }
+      .cost-remove { margin-top: 0; width: 100%; }
+      .hero h2 { font-size: 25px; }
+      .modal-body { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <section id="loginView" class="login-shell">
+    <div class="login-art">
+      <div class="brand"><span class="brand-mark">✦</span> IdeaVault</div>
+      <div class="login-copy">
+        <h1>Your ideas deserve a home.</h1>
+        <p>Capture website concepts, organize the best opportunities, track what you are building, and turn scattered thoughts into real products.</p>
+      </div>
+      <div class="login-note">Private workspace • Powered by Supabase</div>
+    </div>
+
+    <div class="login-panel">
+      <form id="loginForm" class="login-card">
+        <h2>Welcome back</h2>
+        <p>Sign in to your private ideas dashboard.</p>
+        <div class="field">
+          <label for="loginEmail">Email address</label>
+          <input id="loginEmail" class="input" type="email" autocomplete="username" value="dhruvp246@gmail.com" required />
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <div class="password-wrap">
+            <input id="loginPassword" class="input" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+            <button id="togglePassword" class="password-toggle" type="button" aria-label="Show password">👁</button>
+          </div>
+        </div>
+        <button id="loginButton" class="btn btn-primary btn-full" type="submit">Sign in</button>
+        <div id="loginMessage" class="message" aria-live="polite"></div>
+      </form>
+    </div>
+  </section>
+
+  <section id="appView" class="app-shell hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="brand"><span class="brand-mark">✦</span> IdeaVault</div>
+      <div class="nav-label">WORKSPACE</div>
+      <button class="nav-item active" type="button">◫ All ideas</button>
+      <button class="nav-item" data-quick-status="Planning" type="button">◌ Planning</button>
+      <button class="nav-item" data-quick-status="Building" type="button">⚒ Building</button>
+      <button class="nav-item" data-quick-status="Launched" type="button">✓ Launched</button>
+      <div class="sidebar-bottom">
+        <div class="user-mini">
+          <strong>Dhruv</strong>
+          <span id="signedInEmail"></span>
+        </div>
+        <button id="logoutButton" class="nav-item" type="button">↪ Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button id="mobileMenu" class="mobile-menu" type="button">☰</button>
+          <h1>Website Ideas</h1>
+        </div>
+        <div class="top-actions">
+          <button id="installAppButton" class="btn install-btn hidden" type="button">⇩ Install app</button>
+          <button id="topAddButton" class="btn btn-primary" type="button">＋ New idea</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="hero">
+          <div>
+            <h2>What will you build next?</h2>
+            <p>Save the idea now. Refine it when inspiration strikes.</p>
+          </div>
+          <button id="heroAddButton" class="btn" type="button">＋ Capture an idea</button>
+        </section>
+
+        <section class="stats">
+          <article class="stat-card"><div class="stat-top"><span>Total ideas</span><span class="stat-icon">💡</span></div><div id="statTotal" class="stat-value">0</div></article>
+          <article class="stat-card"><div class="stat-top"><span>Planning</span><span class="stat-icon">🧭</span></div><div id="statPlanning" class="stat-value">0</div></article>
+          <article class="stat-card"><div class="stat-top"><span>Building</span><span class="stat-icon">🛠</span></div><div id="statBuilding" class="stat-value">0</div></article>
+          <article class="stat-card"><div class="stat-top"><span>Launched</span><span class="stat-icon">🚀</span></div><div id="statLaunched" class="stat-value">0</div></article>
+        </section>
+
+        <section class="toolbar">
+          <div class="search"><span>⌕</span><input id="searchInput" class="input" type="search" placeholder="Search ideas, notes or tech..." /></div>
+          <select id="statusFilter" aria-label="Filter by status">
+            <option value="">All statuses</option><option>Planning</option><option>Building</option><option>Launched</option><option>Paused</option>
+          </select>
+          <select id="categoryFilter" aria-label="Filter by category"><option value="">All categories</option></select>
+        </section>
+
+        <section id="ideasGrid" class="ideas-table-wrap"></section>
+      </div>
+    </main>
+  </section>
+
+  <div id="ideaModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head"><h2 id="modalTitle">Add new idea</h2><button id="closeModal" class="close-btn" type="button">×</button></div>
+      <form id="ideaForm" class="modal-body">
+        <input id="ideaId" type="hidden" />
+        <div class="form-grid">
+          <div class="field span-2"><label for="ideaTitle">Idea title *</label><input id="ideaTitle" class="input" maxlength="120" required placeholder="e.g. Restaurant QR ordering system" /></div>
+          <div class="field"><label for="ideaCategory">Category</label><input id="ideaCategory" class="input" maxlength="50" list="categorySuggestions" placeholder="e.g. SaaS" /><datalist id="categorySuggestions"><option value="SaaS"><option value="Marketplace"><option value="AI Tool"><option value="E-commerce"><option value="Productivity"><option value="Finance"><option value="Health"><option value="Education"></datalist></div>
+          <div class="field"><label for="ideaStatus">Status</label><select id="ideaStatus"><option>Planning</option><option>Building</option><option>Launched</option><option>Paused</option></select></div>
+          <div class="field"><label for="ideaPriority">Priority</label><select id="ideaPriority"><option>Medium</option><option>High</option><option>Low</option></select></div>
+          <div class="field"><label for="ideaTargetUser">Target user</label><input id="ideaTargetUser" class="input" maxlength="100" placeholder="Who is it for?" /></div>
+          <div class="field span-2"><label for="ideaDescription">Description</label><textarea id="ideaDescription" maxlength="2000" placeholder="Describe the problem, solution and main features..."></textarea></div>
+          <div class="field span-2"><label for="ideaTechStack">Tech stack</label><input id="ideaTechStack" class="input" maxlength="300" placeholder="Supabase, Cloudflare, n8n..." /></div>
+          <div class="field span-2"><label for="ideaSupabaseAccount">Supabase account</label><input id="ideaSupabaseAccount" class="input" maxlength="500" placeholder="Enter the Supabase account or project details..." /></div>
+          <div class="field"><label for="ideaWebsiteUrl">Website / demo URL</label><input id="ideaWebsiteUrl" class="input" type="url" maxlength="500" placeholder="https://..." /></div>
+          <div class="field"><label for="ideaGithubUrl">GitHub URL</label><input id="ideaGithubUrl" class="input" type="url" maxlength="500" placeholder="https://github.com/..." /></div>
+          <div class="field span-2"><label for="ideaNotes">Private notes</label><textarea id="ideaNotes" maxlength="5000" placeholder="Research, pricing, competitors, next actions..."></textarea></div>
+          <div class="field"><label for="ideaNextStep">Next step</label><input id="ideaNextStep" class="input" maxlength="250" placeholder="What should happen next?" /></div>
+          <div class="field"><label for="ideaDueDate">Target date</label><input id="ideaDueDate" class="input" type="date" /></div>
+          <section class="costing-section">
+            <div class="costing-head">
+              <div><h3>Costing</h3><p>Add one or more expected project costs.</p></div>
+              <button id="addCostButton" class="btn btn-secondary" type="button">＋ Add cost</button>
+            </div>
+            <div id="costRows"></div>
+          </section>
+          <div class="span-2 modal-actions"><button id="cancelModal" class="btn btn-secondary" type="button">Cancel</button><button id="saveIdeaButton" class="btn btn-primary" type="submit">Save idea</button></div>
+        </div>
+        <div id="formMessage" class="message" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://mevffvqrpsiiesfsutng.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldmZmdnFycHNpaWVzZnN1dG5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMTE3MzUsImV4cCI6MjEwMTU4NzczNX0.pN9QyfnEkrNBmzC3imq_YwgqO3E1lbCF5SuZQbyDPs4';
+    const ALLOWED_EMAIL = 'dhruvp246@gmail.com';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+
+    let ideas = [];
+    let currentUser = null;
+    let realtimeChannel = null;
+    let sortState = { key: 'created_at', direction: 'desc' };
+    let editingCosts = [];
+
+    const $ = (id) => document.getElementById(id);
+    const loginView = $('loginView');
+    const appView = $('appView');
+    const ideasGrid = $('ideasGrid');
+    const ideaModal = $('ideaModal');
+
+    function setMessage(element, text = '', type = '') {
+      element.textContent = text;
+      element.className = `message ${type}`.trim();
+    }
+
+    function escapeHtml(value = '') {
+      return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+    }
+
+    function safeUrl(value) {
+      if (!value) return '';
+      try {
+        const url = new URL(value);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+      } catch { return ''; }
+    }
+
+
+    function createCostRow(cost = {}) {
+      const rowId = cost.id || crypto.randomUUID();
+      return `<div class="cost-row" data-cost-row="${escapeHtml(rowId)}">
+        <div class="field"><label>Title *</label><input class="input cost-title" maxlength="120" placeholder="e.g. Supabase Pro" value="${escapeHtml(cost.title || '')}" /></div>
+        <div class="field"><label>Cost *</label><input class="input cost-amount" type="number" min="0" step="0.01" placeholder="0.00" value="${cost.cost_amount ?? ''}" /></div>
+        <div class="field"><label>Billing period *</label><select class="cost-period"><option value="Monthly" ${cost.billing_period === 'Monthly' ? 'selected' : ''}>Per month</option><option value="Yearly" ${cost.billing_period === 'Yearly' ? 'selected' : ''}>Per year</option></select></div>
+        <div class="field"><label>Notes</label><input class="input cost-notes" maxlength="1000" placeholder="Optional details" value="${escapeHtml(cost.notes || '')}" /></div>
+        <button class="cost-remove" type="button" title="Remove cost" aria-label="Remove cost">×</button>
+      </div>`;
+    }
+
+    function renderCostRows(costs = editingCosts) {
+      const container = $('costRows');
+      if (!costs.length) {
+        container.innerHTML = '<div class="cost-empty">No costs added yet.</div>';
+        return;
+      }
+      container.innerHTML = costs.map(createCostRow).join('');
+    }
+
+    function collectCostRows() {
+      return [...document.querySelectorAll('[data-cost-row]')].map((row) => ({
+        title: row.querySelector('.cost-title').value.trim(),
+        cost_amount: row.querySelector('.cost-amount').value,
+        billing_period: row.querySelector('.cost-period').value,
+        notes: row.querySelector('.cost-notes').value.trim() || null
+      })).filter((cost) => cost.title || cost.cost_amount || cost.notes);
+    }
+
+    async function loadIdeaCosts(ideaId) {
+      if (!ideaId) return [];
+      const { data, error } = await db.from('idea_costs').select('*').eq('idea_id', ideaId).order('created_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function saveIdeaCosts(ideaId, costs) {
+      const { error: deleteError } = await db.from('idea_costs').delete().eq('idea_id', ideaId);
+      if (deleteError) throw deleteError;
+      if (!costs.length) return;
+      const rows = costs.map((cost) => ({
+        idea_id: ideaId,
+        user_id: currentUser.id,
+        title: cost.title,
+        cost_amount: Number(cost.cost_amount),
+        billing_period: cost.billing_period,
+        notes: cost.notes
+      }));
+      const { error: insertError } = await db.from('idea_costs').insert(rows);
+      if (insertError) throw insertError;
+    }
+
+    async function showApp(user) {
+      if (!user || user.email?.toLowerCase() !== ALLOWED_EMAIL) {
+        await db.auth.signOut();
+        throw new Error('This account is not authorized.');
+      }
+      currentUser = user;
+      $('signedInEmail').textContent = user.email;
+      loginView.classList.add('hidden');
+      appView.classList.remove('hidden');
+      await loadIdeas();
+      subscribeToIdeaChanges();
+    }
+
+    function showLogin() {
+      unsubscribeFromIdeaChanges();
+      currentUser = null;
+      ideas = [];
+      appView.classList.add('hidden');
+      loginView.classList.remove('hidden');
+      $('loginPassword').value = '';
+      renderIdeas();
+    }
+
+    async function initializeAuth() {
+      const { data, error } = await db.auth.getSession();
+      if (error) console.error(error);
+      if (data?.session?.user) {
+        try { await showApp(data.session.user); }
+        catch (err) { showLogin(); setMessage($('loginMessage'), err.message, 'error'); }
+      } else {
+        showLogin();
+      }
+    }
+
+    $('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('loginButton');
+      setMessage($('loginMessage'));
+      button.disabled = true;
+      button.textContent = 'Signing in...';
+      try {
+        const email = $('loginEmail').value.trim().toLowerCase();
+        if (email !== ALLOWED_EMAIL) throw new Error('This email is not authorized.');
+        const { data, error } = await db.auth.signInWithPassword({ email, password: $('loginPassword').value });
+        if (error) throw error;
+        await showApp(data.user);
+      } catch (error) {
+        setMessage($('loginMessage'), error.message || 'Unable to sign in.', 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Sign in';
+      }
+    });
+
+    $('togglePassword').addEventListener('click', () => {
+      const input = $('loginPassword');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+
+    $('logoutButton').addEventListener('click', async () => {
+      await db.auth.signOut();
+      showLogin();
+    });
+
+    async function loadIdeas() {
+      const { data, error } = await db.from('ideas').select('*').order('created_at', { ascending: false });
+      if (error) {
+        ideasGrid.innerHTML = `<div class="empty-state"><div class="big">⚠️</div><h3>Could not load ideas</h3><p>${escapeHtml(error.message)}</p></div>`;
+        return;
+      }
+      ideas = data || [];
+      updateCategoryOptions();
+      renderIdeas();
+    }
+
+    function compareValues(a, b, key) {
+      let av = a?.[key];
+      let bv = b?.[key];
+      if (key === 'due_date' || key === 'created_at') {
+        av = av ? new Date(av).getTime() : null;
+        bv = bv ? new Date(bv).getTime() : null;
+      } else {
+        av = String(av ?? '').toLowerCase();
+        bv = String(bv ?? '').toLowerCase();
+      }
+      if (av === bv) return 0;
+      if (av === null || av === '') return 1;
+      if (bv === null || bv === '') return -1;
+      return av > bv ? 1 : -1;
+    }
+
+    function filteredIdeas() {
+      const query = $('searchInput').value.trim().toLowerCase();
+      const status = $('statusFilter').value;
+      const category = $('categoryFilter').value;
+      const result = ideas.filter((idea) => {
+        const haystack = [idea.title, idea.description, idea.category, idea.status, idea.tech_stack, idea.supabase_account, idea.notes, idea.target_user, idea.next_step, idea.website_url, idea.github_url].join(' ').toLowerCase();
+        return (!query || haystack.includes(query)) && (!status || idea.status === status) && (!category || idea.category === category);
+      });
+      result.sort((a, b) => compareValues(a, b, sortState.key) * (sortState.direction === 'asc' ? 1 : -1));
+      return result;
+    }
+
+    function sortIdeas(key) {
+      if (sortState.key === key) sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+      else sortState = { key, direction: 'asc' };
+      renderIdeas();
+    }
+    window.sortIdeas = sortIdeas;
+
+    function sortHeader(label, key) {
+      const active = sortState.key === key;
+      const arrow = active ? (sortState.direction === 'asc' ? '↑' : '↓') : '↕';
+      return `<button class="sort-button ${active ? 'active' : ''}" type="button" onclick="sortIdeas('${key}')">${label}<span class="sort-arrow">${arrow}</span></button>`;
+    }
+
+    function renderIdeas() {
+      $('statTotal').textContent = ideas.length;
+      $('statPlanning').textContent = ideas.filter(i => i.status === 'Planning').length;
+      $('statBuilding').textContent = ideas.filter(i => i.status === 'Building').length;
+      $('statLaunched').textContent = ideas.filter(i => i.status === 'Launched').length;
+
+      const list = filteredIdeas();
+      if (!list.length) {
+        ideasGrid.innerHTML = `<div class="empty-state"><div class="big">💡</div><h3>No ideas found</h3><p>Capture your first idea or change the current filters.</p><button class="btn btn-primary" onclick="openIdeaModal()">＋ Add an idea</button></div>`;
+        return;
+      }
+
+      const rows = list.map((idea) => {
+        const statusClass = `status-${String(idea.status || '').toLowerCase()}`;
+        const website = safeUrl(idea.website_url);
+        const github = safeUrl(idea.github_url);
+        const targetDate = idea.due_date
+          ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${idea.due_date}T00:00:00Z`))
+          : '—';
+        const notes = idea.notes || idea.description || '—';
+        return `<tr>
+          <td class="title-cell">${escapeHtml(idea.title)}</td>
+          <td class="category-cell">${escapeHtml(idea.category || 'Uncategorized')}</td>
+          <td><span class="badge ${statusClass}">${escapeHtml(idea.status || 'Planning')}</span></td>
+          <td>${escapeHtml(idea.supabase_account || '—')}</td>
+          <td>${website ? `<a class="table-link" href="${escapeHtml(website)}" target="_blank" rel="noopener noreferrer">Link</a>` : '—'}</td>
+          <td>${github ? `<a class="table-link" href="${escapeHtml(github)}" target="_blank" rel="noopener noreferrer">Link</a>` : '—'}</td>
+          <td class="date-cell">${targetDate}</td>
+          <td class="notes-cell"><div class="notes-preview" title="${escapeHtml(notes)}">${escapeHtml(notes)}</div></td>
+          <td><div class="table-actions"><button class="icon-btn" onclick="editIdea('${idea.id}')" title="Edit">✎</button><button class="icon-btn" onclick="deleteIdea('${idea.id}')" title="Delete">⌫</button></div></td>
+        </tr>`;
+      }).join('');
+
+      ideasGrid.innerHTML = `<table class="ideas-table">
+        <thead><tr>
+          <th>${sortHeader('Idea title', 'title')}</th>
+          <th>${sortHeader('Category', 'category')}</th>
+          <th>${sortHeader('Status', 'status')}</th>
+          <th>${sortHeader('Supabase account', 'supabase_account')}</th>
+          <th>Website / Demo</th>
+          <th>GitHub</th>
+          <th>${sortHeader('Target date', 'due_date')}</th>
+          <th>${sortHeader('Notes', 'notes')}</th>
+          <th>Actions</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }
+
+    function updateCategoryOptions() {
+      const select = $('categoryFilter');
+      const selected = select.value;
+      const categories = [...new Set(ideas.map(i => i.category).filter(Boolean))].sort();
+      select.innerHTML = '<option value="">All categories</option>' + categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+      if (categories.includes(selected)) select.value = selected;
+    }
+
+    function unsubscribeFromIdeaChanges() {
+      if (realtimeChannel) {
+        db.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+      }
+    }
+
+    function subscribeToIdeaChanges() {
+      unsubscribeFromIdeaChanges();
+      if (!currentUser) return;
+      realtimeChannel = db
+        .channel(`ideas-live-${currentUser.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ideas' }, (payload) => {
+          const changedId = payload.new?.id || payload.old?.id;
+          if (!changedId) return;
+          if (payload.eventType === 'DELETE') {
+            ideas = ideas.filter((idea) => idea.id !== changedId);
+          } else {
+            const changed = payload.new;
+            if (changed.user_id && changed.user_id !== currentUser.id) return;
+            const existingIndex = ideas.findIndex((idea) => idea.id === changedId);
+            if (existingIndex >= 0) ideas[existingIndex] = changed;
+            else ideas.unshift(changed);
+          }
+          updateCategoryOptions();
+          renderIdeas();
+        })
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR') console.error('Supabase Realtime channel error');
+        });
+    }
+
+    async function openIdeaModal(idea = null) {
+      $('ideaForm').reset();
+      editingCosts = [];
+      renderCostRows();
+      $('ideaId').value = idea?.id || '';
+      $('modalTitle').textContent = idea ? 'Edit idea' : 'Add new idea';
+      $('saveIdeaButton').textContent = idea ? 'Update idea' : 'Save idea';
+      if (idea) {
+        $('ideaTitle').value = idea.title || '';
+        $('ideaCategory').value = idea.category || '';
+        $('ideaStatus').value = idea.status || 'Planning';
+        $('ideaPriority').value = idea.priority || 'Medium';
+        $('ideaTargetUser').value = idea.target_user || '';
+        $('ideaDescription').value = idea.description || '';
+        $('ideaTechStack').value = idea.tech_stack || '';
+        $('ideaSupabaseAccount').value = idea.supabase_account || '';
+        $('ideaWebsiteUrl').value = idea.website_url || '';
+        $('ideaGithubUrl').value = idea.github_url || '';
+        $('ideaNotes').value = idea.notes || '';
+        $('ideaNextStep').value = idea.next_step || '';
+        $('ideaDueDate').value = idea.due_date || '';
+        try {
+          editingCosts = await loadIdeaCosts(idea.id);
+          renderCostRows();
+        } catch (error) {
+          setMessage($('formMessage'), `Idea loaded, but costing could not be loaded: ${error.message}`, 'error');
+        }
+      }
+      setMessage($('formMessage'));
+      ideaModal.classList.remove('hidden');
+      setTimeout(() => $('ideaTitle').focus(), 50);
+    }
+    window.openIdeaModal = openIdeaModal;
+
+    function closeIdeaModal() { ideaModal.classList.add('hidden'); }
+    $('topAddButton').addEventListener('click', () => openIdeaModal());
+    $('heroAddButton').addEventListener('click', () => openIdeaModal());
+    $('closeModal').addEventListener('click', closeIdeaModal);
+    $('cancelModal').addEventListener('click', closeIdeaModal);
+    ideaModal.addEventListener('click', (e) => { if (e.target === ideaModal) closeIdeaModal(); });
+    $('addCostButton').addEventListener('click', () => {
+      editingCosts = collectCostRows();
+      editingCosts.push({ title: '', cost_amount: '', billing_period: 'Monthly', notes: '' });
+      renderCostRows();
+    });
+    $('costRows').addEventListener('click', (event) => {
+      const button = event.target.closest('.cost-remove');
+      if (!button) return;
+      button.closest('[data-cost-row]').remove();
+      editingCosts = collectCostRows();
+      renderCostRows();
+    });
+
+    window.editIdea = (id) => {
+      const idea = ideas.find(i => i.id === id);
+      if (idea) openIdeaModal(idea);
+    };
+
+    $('ideaForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('saveIdeaButton');
+      button.disabled = true;
+      setMessage($('formMessage'));
+      const id = $('ideaId').value;
+      const payload = {
+        user_id: currentUser.id,
+        title: $('ideaTitle').value.trim(),
+        category: $('ideaCategory').value.trim() || 'Uncategorized',
+        status: $('ideaStatus').value,
+        priority: $('ideaPriority').value,
+        target_user: $('ideaTargetUser').value.trim() || null,
+        description: $('ideaDescription').value.trim() || null,
+        tech_stack: $('ideaTechStack').value.trim() || null,
+        supabase_account: $('ideaSupabaseAccount').value.trim() || null,
+        website_url: $('ideaWebsiteUrl').value.trim() || null,
+        github_url: $('ideaGithubUrl').value.trim() || null,
+        notes: $('ideaNotes').value.trim() || null,
+        next_step: $('ideaNextStep').value.trim() || null,
+        due_date: $('ideaDueDate').value || null
+      };
+
+      try {
+        if (!payload.title) throw new Error('Please enter an idea title.');
+        const costs = collectCostRows();
+        for (const cost of costs) {
+          if (!cost.title) throw new Error('Each costing item needs a title.');
+          if (cost.cost_amount === '' || Number(cost.cost_amount) < 0 || !Number.isFinite(Number(cost.cost_amount))) throw new Error('Each costing item needs a valid cost.');
+        }
+        const result = id
+          ? await db.from('ideas').update(payload).eq('id', id).select().single()
+          : await db.from('ideas').insert(payload).select().single();
+        if (result.error) throw result.error;
+        const saved = result.data;
+        await saveIdeaCosts(saved.id, costs);
+        const existingIndex = ideas.findIndex((idea) => idea.id === saved.id);
+        if (existingIndex >= 0) ideas[existingIndex] = saved;
+        else ideas.unshift(saved);
+        updateCategoryOptions();
+        renderIdeas();
+        closeIdeaModal();
+      } catch (error) {
+        setMessage($('formMessage'), error.message || 'Unable to save the idea.', 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = id ? 'Update idea' : 'Save idea';
+      }
+    });
+
+    window.deleteIdea = async (id) => {
+      const idea = ideas.find(i => i.id === id);
+      if (!idea || !confirm(`Delete “${idea.title}”? This cannot be undone.`)) return;
+      const { error } = await db.from('ideas').delete().eq('id', id);
+      if (error) alert(error.message);
+      else {
+        ideas = ideas.filter((idea) => idea.id !== id);
+        updateCategoryOptions();
+        renderIdeas();
+      }
+    };
+
+    ['searchInput', 'statusFilter', 'categoryFilter'].forEach(id => {
+      $(id).addEventListener(id === 'searchInput' ? 'input' : 'change', renderIdeas);
+    });
+
+    document.querySelectorAll('[data-quick-status]').forEach(button => {
+      button.addEventListener('click', () => {
+        $('statusFilter').value = button.dataset.quickStatus;
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        button.classList.add('active');
+        renderIdeas();
+        $('sidebar').classList.remove('open');
+      });
+    });
+    document.querySelector('.nav-item.active').addEventListener('click', () => {
+      $('statusFilter').value = '';
+      renderIdeas();
+    });
+    $('mobileMenu').addEventListener('click', () => $('sidebar').classList.toggle('open'));
+
+    db.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') showLogin();
+      if (event === 'TOKEN_REFRESHED' && session?.user) currentUser = session.user;
+    });
+
+    let deferredInstallPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      $('installAppButton').classList.remove('hidden');
+    });
+
+    $('installAppButton').addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      $('installAppButton').classList.add('hidden');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      $('installAppButton').classList.add('hidden');
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
+        } catch (error) {
+          console.error('Service worker registration failed:', error);
+        }
+      });
+    }
+
+    initializeAuth();
+  </script>
+</body>
+</html>
