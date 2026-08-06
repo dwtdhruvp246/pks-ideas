@@ -112,3 +112,19 @@ using (
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on table public.ideas to authenticated;
 revoke all on table public.ideas from anon;
+
+
+-- Enable Supabase Realtime for cross-device updates.
+-- The block is safe to run repeatedly.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'ideas'
+  ) then
+    alter publication supabase_realtime add table public.ideas;
+  end if;
+end $$;
