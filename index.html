@@ -6,6 +6,14 @@
   <meta name="description" content="Dhruv's private website idea manager" />
   <meta name="robots" content="noindex,nofollow" />
   <title>IdeaVault — Personal Website Ideas</title>
+  <meta name="theme-color" content="#5b5bd6" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="IdeaVault" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -97,6 +105,10 @@
     .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
     .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
     .btn-full { width: 100%; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .install-btn { background: white; color: var(--primary); border: 1px solid #d9d9ee; }
+    .install-btn:hover { background: #f5f5ff; }
+    @media (display-mode: standalone) { .install-btn { display: none !important; } }
     .message { min-height: 22px; margin-top: 15px; font-size: 13px; }
     .message.error { color: var(--danger); }
     .message.success { color: var(--success); }
@@ -283,7 +295,10 @@
           <button id="mobileMenu" class="mobile-menu" type="button">☰</button>
           <h1>Website Ideas</h1>
         </div>
-        <button id="topAddButton" class="btn btn-primary" type="button">＋ New idea</button>
+        <div class="top-actions">
+          <button id="installAppButton" class="btn install-btn hidden" type="button">⇩ Install app</button>
+          <button id="topAddButton" class="btn btn-primary" type="button">＋ New idea</button>
+        </div>
       </header>
 
       <div class="content">
@@ -786,6 +801,37 @@
       if (event === 'SIGNED_OUT') showLogin();
       if (event === 'TOKEN_REFRESHED' && session?.user) currentUser = session.user;
     });
+
+    let deferredInstallPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      $('installAppButton').classList.remove('hidden');
+    });
+
+    $('installAppButton').addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      $('installAppButton').classList.add('hidden');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      $('installAppButton').classList.add('hidden');
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
+        } catch (error) {
+          console.error('Service worker registration failed:', error);
+        }
+      });
+    }
 
     initializeAuth();
   </script>
