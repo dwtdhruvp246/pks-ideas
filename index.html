@@ -317,6 +317,7 @@
           <div class="field"><label for="ideaTargetUser">Target user</label><input id="ideaTargetUser" class="input" maxlength="100" placeholder="Who is it for?" /></div>
           <div class="field span-2"><label for="ideaDescription">Description</label><textarea id="ideaDescription" maxlength="2000" placeholder="Describe the problem, solution and main features..."></textarea></div>
           <div class="field span-2"><label for="ideaTechStack">Tech stack</label><input id="ideaTechStack" class="input" maxlength="300" placeholder="Supabase, Cloudflare, n8n..." /></div>
+          <div class="field span-2"><label for="ideaSupabaseAccount">Supabase account</label><input id="ideaSupabaseAccount" class="input" maxlength="500" placeholder="Enter the Supabase account or project details..." /></div>
           <div class="field"><label for="ideaWebsiteUrl">Website / demo URL</label><input id="ideaWebsiteUrl" class="input" type="url" maxlength="500" placeholder="https://..." /></div>
           <div class="field"><label for="ideaGithubUrl">GitHub URL</label><input id="ideaGithubUrl" class="input" type="url" maxlength="500" placeholder="https://github.com/..." /></div>
           <div class="field span-2"><label for="ideaNotes">Private notes</label><textarea id="ideaNotes" maxlength="5000" placeholder="Research, pricing, competitors, next actions..."></textarea></div>
@@ -444,7 +445,7 @@
       const priorityRank = { High: 1, Medium: 2, Low: 3 };
 
       const result = ideas.filter((idea) => {
-        const haystack = [idea.title, idea.description, idea.category, idea.tech_stack, idea.notes, idea.target_user, idea.next_step].join(' ').toLowerCase();
+        const haystack = [idea.title, idea.description, idea.category, idea.tech_stack, idea.supabase_account, idea.notes, idea.target_user, idea.next_step].join(' ').toLowerCase();
         return (!query || haystack.includes(query)) && (!status || idea.status === status) && (!category || idea.category === category);
       });
 
@@ -511,6 +512,7 @@
         $('ideaTargetUser').value = idea.target_user || '';
         $('ideaDescription').value = idea.description || '';
         $('ideaTechStack').value = idea.tech_stack || '';
+        $('ideaSupabaseAccount').value = idea.supabase_account || '';
         $('ideaWebsiteUrl').value = idea.website_url || '';
         $('ideaGithubUrl').value = idea.github_url || '';
         $('ideaNotes').value = idea.notes || '';
@@ -550,6 +552,7 @@
         target_user: $('ideaTargetUser').value.trim() || null,
         description: $('ideaDescription').value.trim() || null,
         tech_stack: $('ideaTechStack').value.trim() || null,
+        supabase_account: $('ideaSupabaseAccount').value.trim() || null,
         website_url: $('ideaWebsiteUrl').value.trim() || null,
         github_url: $('ideaGithubUrl').value.trim() || null,
         notes: $('ideaNotes').value.trim() || null,

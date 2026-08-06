@@ -15,6 +15,7 @@ create table if not exists public.ideas (
   priority text not null default 'Medium' check (priority in ('High', 'Medium', 'Low')),
   target_user text check (target_user is null or char_length(target_user) <= 100),
   tech_stack text check (tech_stack is null or char_length(tech_stack) <= 300),
+  supabase_account text check (supabase_account is null or char_length(supabase_account) <= 500),
   website_url text check (website_url is null or char_length(website_url) <= 500),
   github_url text check (github_url is null or char_length(github_url) <= 500),
   notes text check (notes is null or char_length(notes) <= 5000),
@@ -23,6 +24,17 @@ create table if not exists public.ideas (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Adds the field safely when upgrading an existing database.
+alter table public.ideas
+  add column if not exists supabase_account text;
+
+alter table public.ideas
+  drop constraint if exists ideas_supabase_account_check;
+
+alter table public.ideas
+  add constraint ideas_supabase_account_check
+  check (supabase_account is null or char_length(supabase_account) <= 500);
 
 create index if not exists ideas_user_id_idx on public.ideas(user_id);
 create index if not exists ideas_status_idx on public.ideas(status);
