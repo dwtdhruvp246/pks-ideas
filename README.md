@@ -29,3 +29,9 @@ This build includes defensive Supabase Realtime handling, safe channel cleanup, 
 This version replaces the Planning / Building / Launched sidebar shortcuts with a live list of idea titles. Clicking an idea title opens that idea as a full page instead of a dialog. The New Idea buttons also open a full-page editor. The dashboard remains available through **All ideas**.
 
 No new Supabase schema changes are required for this navigation redesign.
+
+## Unsaved changes protection
+
+The idea editor now tracks whether the form differs from the last loaded/saved version. If you try to navigate to another idea, go back to the dashboard, create a new idea, sign out, refresh, close the tab, or close the installed PWA while edits are unsaved, IdeaVault warns you before the changes are lost.
+
+The warning clears automatically after a successful save, and it also clears if you manually revert the form back to its last saved state.

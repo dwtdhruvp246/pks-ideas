@@ -242,6 +242,8 @@
 
     .mobile-menu { display: none; }
 
+    .unsaved-indicator { display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 12px; font-weight: 800; white-space: nowrap; }
+    .unsaved-indicator::before { content: '•'; font-size: 18px; line-height: 0; }
     @media (max-width: 1100px) {
       .stats { grid-template-columns: repeat(2, 1fr); }
       .toolbar { grid-template-columns: 1fr 1fr; }
@@ -369,6 +371,7 @@
               <p id="ideaPageSubtext">Add the details for this website idea.</p>
             </div>
             <div class="idea-page-actions">
+              <span id="unsavedIndicator" class="unsaved-indicator hidden" role="status" aria-live="polite">Unsaved changes</span>
               <button id="deleteIdeaPageButton" class="btn btn-danger hidden" type="button">Delete</button>
               <button id="saveIdeaTopButton" class="btn btn-primary" type="button">Save idea</button>
             </div>
@@ -442,6 +445,9 @@
     let realtimeChannel = null;
     let sortState = { key: 'title', direction: 'asc' };
     let editingCosts = [];
+    let savedFormSnapshot = '';
+    let hasUnsavedChanges = false;
+    let isSavingIdea = false;
 
     const $ = (id) => document.getElementById(id);
     const loginView = $('loginView');
@@ -467,6 +473,60 @@
     }
 
     const escapeAttr = escapeHtml;
+
+
+    function getIdeaFormSnapshot() {
+      const formData = {
+        title: $('ideaTitle').value,
+        category: $('ideaCategory').value,
+        status: $('ideaStatus').value,
+        priority: $('ideaPriority').value,
+        target_user: $('ideaTargetUser').value,
+        description: $('ideaDescription').value,
+        tech_stack: $('ideaTechStack').value,
+        supabase_account: $('ideaSupabaseAccount').value,
+        website_url: $('ideaWebsiteUrl').value,
+        github_url: $('ideaGithubUrl').value,
+        notes: $('ideaNotes').value,
+        next_step: $('ideaNextStep').value,
+        due_date: $('ideaDueDate').value,
+        costs: collectCostRows().map((cost) => ({
+          title: cost.title || '',
+          cost_amount: String(cost.cost_amount ?? ''),
+          billing_period: cost.billing_period || '',
+          notes: cost.notes || ''
+        }))
+      };
+      return JSON.stringify(formData);
+    }
+
+    function setUnsavedState(value) {
+      hasUnsavedChanges = Boolean(value);
+      const indicator = $('unsavedIndicator');
+      if (indicator) indicator.classList.toggle('hidden', !hasUnsavedChanges);
+    }
+
+    function establishSavedSnapshot() {
+      savedFormSnapshot = getIdeaFormSnapshot();
+      setUnsavedState(false);
+    }
+
+    function refreshUnsavedState() {
+      if (ideaPage.classList.contains('hidden') || isSavingIdea) return;
+      setUnsavedState(getIdeaFormSnapshot() !== savedFormSnapshot);
+    }
+
+    function confirmDiscardChanges() {
+      if (!hasUnsavedChanges) return true;
+      return window.confirm('You have unsaved changes. If you leave this page now, those changes will be lost. Leave without saving?');
+    }
+
+    function leaveEditorIfAllowed(callback) {
+      if (!confirmDiscardChanges()) return false;
+      setUnsavedState(false);
+      callback();
+      return true;
+    }
 
     function safeUrl(value) {
       if (!value) return '';
@@ -555,6 +615,8 @@
       loginView.classList.remove('hidden');
       $('loginPassword').value = '';
       activeIdeaId = null;
+      savedFormSnapshot = '';
+      setUnsavedState(false);
       if ($('sidebarIdeas')) $('sidebarIdeas').innerHTML = '';
       if (dashboardView && ideaPage) { dashboardView.classList.remove('hidden'); ideaPage.classList.add('hidden'); }
       renderIdeas();
@@ -597,6 +659,8 @@
     });
 
     $('logoutButton').addEventListener('click', async () => {
+      if (!confirmDiscardChanges()) return;
+      setUnsavedState(false);
       await db.auth.signOut();
       showLogin();
     });
@@ -778,6 +842,8 @@
     }
 
     function showDashboard() {
+      setUnsavedState(false);
+      savedFormSnapshot = '';
       activeIdeaId = null;
       dashboardView.classList.remove('hidden');
       ideaPage.classList.add('hidden');
@@ -790,6 +856,8 @@
     }
 
     async function openIdeaPage(idea = null) {
+      setUnsavedState(false);
+      savedFormSnapshot = '';
       $('ideaForm').reset();
       editingCosts = [];
       renderCostRows();
@@ -833,6 +901,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
       if (idea?.id) history.replaceState(null, '', `#idea=${encodeURIComponent(idea.id)}`);
       else history.replaceState(null, '', '#new');
+      establishSavedSnapshot();
       setTimeout(() => $('ideaTitle').focus(), 50);
     }
 
@@ -841,24 +910,25 @@
       if (idea) openIdeaPage(idea);
     }
 
-    $('topAddButton').addEventListener('click', () => openIdeaPage());
-    $('heroAddButton').addEventListener('click', () => openIdeaPage());
-    $('backToIdeas').addEventListener('click', showDashboard);
-    $('cancelPageButton').addEventListener('click', showDashboard);
-    $('allIdeasNav').addEventListener('click', showDashboard);
+    $('topAddButton').addEventListener('click', () => leaveEditorIfAllowed(() => openIdeaPage()));
+    $('heroAddButton').addEventListener('click', () => leaveEditorIfAllowed(() => openIdeaPage()));
+    $('backToIdeas').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
+    $('cancelPageButton').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
+    $('allIdeasNav').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('saveIdeaTopButton').addEventListener('click', () => $('ideaForm').requestSubmit());
 
     $('sidebarIdeas').addEventListener('click', (event) => {
       const button = event.target.closest('[data-sidebar-idea]');
       if (!button) return;
       const idea = ideas.find((item) => item.id === button.dataset.sidebarIdea);
-      if (idea) openIdeaPage(idea);
+      if (idea && idea.id !== activeIdeaId) leaveEditorIfAllowed(() => openIdeaPage(idea));
     });
 
     $('addCostButton').addEventListener('click', () => {
       editingCosts = collectCostRows();
       editingCosts.push({ title: '', cost_amount: '', billing_period: 'Monthly', notes: '' });
       renderCostRows();
+      refreshUnsavedState();
     });
 
     $('costRows').addEventListener('click', (event) => {
@@ -867,7 +937,11 @@
       button.closest('[data-cost-row]').remove();
       editingCosts = collectCostRows();
       renderCostRows();
+      refreshUnsavedState();
     });
+
+    $('ideaForm').addEventListener('input', refreshUnsavedState);
+    $('ideaForm').addEventListener('change', refreshUnsavedState);
 
     $('ideaForm').addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -875,6 +949,7 @@
       const topButton = $('saveIdeaTopButton');
       button.disabled = true;
       topButton.disabled = true;
+      isSavingIdea = true;
       setMessage($('formMessage'));
       const id = $('ideaId').value;
       const payload = {
@@ -919,11 +994,14 @@
         updateCategoryOptions();
         renderSidebarIdeas();
         renderIdeas();
+        establishSavedSnapshot();
         setMessage($('formMessage'), 'Saved successfully.', 'success');
         history.replaceState(null, '', `#idea=${encodeURIComponent(saved.id)}`);
       } catch (error) {
         setMessage($('formMessage'), error.message || 'Unable to save the idea.', 'error');
       } finally {
+        isSavingIdea = false;
+        refreshUnsavedState();
         button.disabled = false;
         topButton.disabled = false;
         const nowEditing = Boolean($('ideaId').value);
@@ -952,9 +1030,11 @@
       const button = event.target.closest('[data-action]');
       if (!button || !ideasGrid.contains(button)) return;
       const action = button.dataset.action;
-      if (action === 'add-idea') openIdeaPage();
+      if (action === 'add-idea') leaveEditorIfAllowed(() => openIdeaPage());
       if (action === 'sort' && button.dataset.sortKey) sortIdeas(button.dataset.sortKey);
-      if ((action === 'edit' || action === 'open-idea') && button.dataset.id) editIdea(button.dataset.id);
+      if ((action === 'edit' || action === 'open-idea') && button.dataset.id) {
+        if (button.dataset.id !== activeIdeaId) leaveEditorIfAllowed(() => editIdea(button.dataset.id));
+      }
       if (action === 'delete' && button.dataset.id) deleteIdea(button.dataset.id);
     });
 
@@ -967,6 +1047,12 @@
     db.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') showLogin();
       if (event === 'TOKEN_REFRESHED' && session?.user) currentUser = session.user;
+    });
+
+    window.addEventListener('beforeunload', (event) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = '';
     });
 
     let deferredInstallPrompt = null;
