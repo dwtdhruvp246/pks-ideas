@@ -194,3 +194,80 @@ begin
     alter publication supabase_realtime add table public.ideas;
   end if;
 end $$;
+
+
+-- ============================================================
+-- DASHBOARD NOTES
+-- One synced scratchpad / to-do note per authenticated user.
+-- ============================================================
+create table if not exists public.dashboard_notes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  content text not null default '' check (char_length(content) <= 10000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists dashboard_notes_user_id_idx on public.dashboard_notes(user_id);
+
+drop trigger if exists dashboard_notes_set_updated_at on public.dashboard_notes;
+create trigger dashboard_notes_set_updated_at
+before update on public.dashboard_notes
+for each row execute function public.set_updated_at();
+
+alter table public.dashboard_notes enable row level security;
+
+drop policy if exists "Owner can view own dashboard note" on public.dashboard_notes;
+drop policy if exists "Owner can add own dashboard note" on public.dashboard_notes;
+drop policy if exists "Owner can update own dashboard note" on public.dashboard_notes;
+drop policy if exists "Owner can delete own dashboard note" on public.dashboard_notes;
+
+create policy "Owner can view own dashboard note"
+on public.dashboard_notes for select to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can add own dashboard note"
+on public.dashboard_notes for insert to authenticated
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can update own dashboard note"
+on public.dashboard_notes for update to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+)
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can delete own dashboard note"
+on public.dashboard_notes for delete to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+grant select, insert, update, delete on table public.dashboard_notes to authenticated;
+revoke all on table public.dashboard_notes from anon;
+
+-- Enable Realtime for the dashboard note so edits saved on one device
+-- can appear on another open device without reloading the page.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'dashboard_notes'
+  ) then
+    alter publication supabase_realtime add table public.dashboard_notes;
+  end if;
+end $$;

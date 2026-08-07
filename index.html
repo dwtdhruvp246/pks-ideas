@@ -163,6 +163,32 @@
     .stat-icon { width: 37px; height: 37px; border-radius: 11px; display: grid; place-items: center; background: var(--surface-2); }
     .stat-value { font-size: 30px; font-weight: 800; margin-top: 14px; letter-spacing: -1.2px; }
 
+    .dashboard-overview {
+      display: grid; grid-template-columns: minmax(430px, .85fr) minmax(0, 1.35fr);
+      gap: 18px; align-items: stretch; margin-bottom: 24px;
+    }
+    .dashboard-overview .stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 0;
+    }
+    .dashboard-overview .stat-card { min-height: 132px; }
+    .dashboard-notes {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; box-shadow: 0 4px 14px rgba(15,23,42,.035);
+      display: flex; flex-direction: column; min-height: 280px;
+    }
+    .dashboard-notes-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+    .dashboard-notes-head h3 { margin: 0; font-size: 17px; }
+    .dashboard-notes-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .dashboard-note-textarea {
+      flex: 1; min-height: 158px; resize: vertical; line-height: 1.55;
+      background: #fbfcff;
+    }
+    .dashboard-note-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .dashboard-note-status { min-height: 18px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .dashboard-note-status.unsaved { color: var(--warning); }
+    .dashboard-note-status.saved { color: var(--success); }
+    .dashboard-note-hint { color: var(--muted); font-size: 11px; margin-top: 7px; }
+
     .toolbar { display: grid; grid-template-columns: minmax(260px, 1fr) 180px 180px; gap: 12px; margin-bottom: 18px; }
     .search { position: relative; }
     .search input { padding-left: 42px; }
@@ -256,7 +282,8 @@
     .unsaved-indicator { display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 12px; font-weight: 800; white-space: nowrap; }
     .unsaved-indicator::before { content: '•'; font-size: 18px; line-height: 0; }
     @media (max-width: 1100px) {
-      .stats { grid-template-columns: repeat(2, 1fr); }
+      .dashboard-overview { grid-template-columns: minmax(380px, .9fr) minmax(0, 1.1fr); }
+      .dashboard-overview .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .toolbar { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 800px) {
@@ -264,13 +291,18 @@
       .login-art { display: none; }
       .topbar { padding: 0 18px; }
       .content { padding: 20px 16px; }
-      .hero { align-items: flex-start; flex-direction: column; padding: 25px; }
+      .dashboard-overview { grid-template-columns: 1fr; }
+      .dashboard-notes { min-height: 240px; }
       .idea-page-head { align-items: flex-start; flex-direction: column; }
       .idea-page-actions { width: 100%; }
       .idea-page-actions .btn { flex: 1; }
     }
     @media (max-width: 560px) {
-      .stats, .toolbar, .form-grid { grid-template-columns: 1fr; }
+      .toolbar, .form-grid { grid-template-columns: 1fr; }
+      .dashboard-overview .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .dashboard-overview .stat-card { padding: 14px; min-height: 112px; }
+      .dashboard-overview .stat-value { font-size: 25px; margin-top: 10px; }
+      .dashboard-overview .stat-icon { width: 32px; height: 32px; }
       .span-2 { grid-column: span 1; }
       .cost-row { grid-template-columns: 1fr; }
       .cost-remove { margin-top: 0; width: 100%; }
@@ -345,19 +377,28 @@
 
       <div class="content">
         <div id="dashboardView">
-          <section class="hero">
-            <div>
-              <h2>What will you build next?</h2>
-              <p>Save the idea now. Refine it when inspiration strikes.</p>
-            </div>
-            <button id="heroAddButton" class="btn" type="button">＋ Capture an idea</button>
-          </section>
+          <section class="dashboard-overview">
+            <section class="stats" aria-label="Idea counters">
+              <article class="stat-card"><div class="stat-top"><span>Total ideas</span><span class="stat-icon">💡</span></div><div id="statTotal" class="stat-value">0</div></article>
+              <article class="stat-card"><div class="stat-top"><span>Planning</span><span class="stat-icon">🧭</span></div><div id="statPlanning" class="stat-value">0</div></article>
+              <article class="stat-card"><div class="stat-top"><span>Building</span><span class="stat-icon">🛠</span></div><div id="statBuilding" class="stat-value">0</div></article>
+              <article class="stat-card"><div class="stat-top"><span>Launched</span><span class="stat-icon">🚀</span></div><div id="statLaunched" class="stat-value">0</div></article>
+            </section>
 
-          <section class="stats">
-            <article class="stat-card"><div class="stat-top"><span>Total ideas</span><span class="stat-icon">💡</span></div><div id="statTotal" class="stat-value">0</div></article>
-            <article class="stat-card"><div class="stat-top"><span>Planning</span><span class="stat-icon">🧭</span></div><div id="statPlanning" class="stat-value">0</div></article>
-            <article class="stat-card"><div class="stat-top"><span>Building</span><span class="stat-icon">🛠</span></div><div id="statBuilding" class="stat-value">0</div></article>
-            <article class="stat-card"><div class="stat-top"><span>Launched</span><span class="stat-icon">🚀</span></div><div id="statLaunched" class="stat-value">0</div></article>
+            <section class="dashboard-notes" aria-labelledby="dashboardNotesHeading">
+              <div class="dashboard-notes-head">
+                <div>
+                  <h3 id="dashboardNotesHeading">Notes</h3>
+                  <p>Keep a quick list of what you need to do across your projects.</p>
+                </div>
+              </div>
+              <textarea id="dashboardNoteInput" class="input dashboard-note-textarea" maxlength="10000" placeholder="Type what you need to do..."></textarea>
+              <div class="dashboard-note-hint">Press Enter to save • Shift + Enter for a new line</div>
+              <div class="dashboard-note-footer">
+                <span id="dashboardNoteStatus" class="dashboard-note-status" role="status" aria-live="polite"></span>
+                <button id="saveDashboardNoteButton" class="btn btn-primary" type="button">Save note</button>
+              </div>
+            </section>
           </section>
 
           <section class="toolbar">
@@ -451,6 +492,9 @@
     let ideas = [];
     let currentUser = null;
     let realtimeChannel = null;
+    let dashboardNoteRealtimeChannel = null;
+    let dashboardNoteSavedValue = '';
+    let isSavingDashboardNote = false;
     let sortState = { key: 'title', direction: 'asc' };
     let editingCosts = [];
     let savedFormSnapshot = '';
@@ -607,7 +651,9 @@
       loginView.classList.add('hidden');
       appView.classList.remove('hidden');
       await loadIdeas();
+      await loadDashboardNote();
       subscribeToIdeaChanges();
+      subscribeToDashboardNoteChanges();
       const hashMatch = location.hash.match(/^#idea=(.+)$/);
       if (hashMatch) {
         const idea = ideas.find((item) => item.id === decodeURIComponent(hashMatch[1]));
@@ -617,6 +663,7 @@
 
     function showLogin() {
       unsubscribeFromIdeaChanges();
+      unsubscribeFromDashboardNoteChanges();
       currentUser = null;
       ideas = [];
       appView.classList.add('hidden');
@@ -626,6 +673,9 @@
       savedFormSnapshot = '';
       setUnsavedState(false);
       if ($('sidebarIdeas')) $('sidebarIdeas').innerHTML = '';
+      if ($('dashboardNoteInput')) $('dashboardNoteInput').value = '';
+      dashboardNoteSavedValue = '';
+      updateDashboardNoteStatus('');
       if (dashboardView && ideaPage) { dashboardView.classList.remove('hidden'); ideaPage.classList.add('hidden'); }
       renderIdeas();
     }
@@ -668,10 +718,141 @@
 
     $('logoutButton').addEventListener('click', async () => {
       if (!confirmDiscardChanges()) return;
+      if (dashboardNoteIsDirty() && !window.confirm('Your dashboard note has unsaved changes. Sign out and lose those note changes?')) return;
       setUnsavedState(false);
       await db.auth.signOut();
       showLogin();
     });
+
+    function updateDashboardNoteStatus(state = '', message = '') {
+      const status = $('dashboardNoteStatus');
+      if (!status) return;
+      status.className = `dashboard-note-status ${state}`.trim();
+      status.textContent = message;
+    }
+
+    function dashboardNoteIsDirty() {
+      const input = $('dashboardNoteInput');
+      return Boolean(input && input.value !== dashboardNoteSavedValue);
+    }
+
+    async function loadDashboardNote() {
+      if (!currentUser) return;
+      const { data, error } = await db
+        .from('dashboard_notes')
+        .select('content, updated_at')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Could not load dashboard note:', error);
+        updateDashboardNoteStatus('', 'Could not load notes. Run the updated Supabase SQL.');
+        return;
+      }
+
+      const value = data?.content || '';
+      $('dashboardNoteInput').value = value;
+      dashboardNoteSavedValue = value;
+      updateDashboardNoteStatus('', '');
+    }
+
+    async function saveDashboardNote() {
+      if (!currentUser || isSavingDashboardNote) return;
+      const button = $('saveDashboardNoteButton');
+      const input = $('dashboardNoteInput');
+      const content = input.value;
+
+      isSavingDashboardNote = true;
+      button.disabled = true;
+      button.textContent = 'Saving...';
+      updateDashboardNoteStatus('', 'Saving...');
+
+      const { data, error } = await db
+        .from('dashboard_notes')
+        .upsert({ user_id: currentUser.id, content }, { onConflict: 'user_id' })
+        .select('content, updated_at')
+        .single();
+
+      isSavingDashboardNote = false;
+      button.disabled = false;
+      button.textContent = 'Save note';
+
+      if (error) {
+        console.error('Could not save dashboard note:', error);
+        updateDashboardNoteStatus('unsaved', error.message || 'Could not save note.');
+        return;
+      }
+
+      dashboardNoteSavedValue = data?.content ?? content;
+      if (input.value === dashboardNoteSavedValue) {
+        updateDashboardNoteStatus('saved', 'Saved');
+        window.setTimeout(() => {
+          if (!dashboardNoteIsDirty()) updateDashboardNoteStatus('', '');
+        }, 1800);
+      } else {
+        updateDashboardNoteStatus('unsaved', 'Unsaved changes');
+      }
+    }
+
+    function unsubscribeFromDashboardNoteChanges() {
+      if (!dashboardNoteRealtimeChannel) return;
+      try {
+        if (typeof dashboardNoteRealtimeChannel.unsubscribe === 'function') {
+          dashboardNoteRealtimeChannel.unsubscribe();
+        } else if (db && typeof db.removeChannel === 'function') {
+          db.removeChannel(dashboardNoteRealtimeChannel);
+        }
+      } catch (error) {
+        console.warn('Dashboard note realtime cleanup failed', error);
+      } finally {
+        dashboardNoteRealtimeChannel = null;
+      }
+    }
+
+    function subscribeToDashboardNoteChanges() {
+      unsubscribeFromDashboardNoteChanges();
+      if (!currentUser) return;
+
+      dashboardNoteRealtimeChannel = db
+        .channel(`dashboard-note-live-${currentUser.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'dashboard_notes' }, (payload) => {
+          const changed = payload?.new || null;
+          const previous = payload?.old || null;
+          const row = changed || previous;
+          if (!row || row.user_id !== currentUser.id) return;
+
+          const eventType = (payload?.eventType || payload?.type || '').toString().toUpperCase();
+          const input = $('dashboardNoteInput');
+          if (!input) return;
+
+          if (eventType === 'DELETE') {
+            if (!dashboardNoteIsDirty()) input.value = '';
+            dashboardNoteSavedValue = '';
+            updateDashboardNoteStatus('', '');
+            return;
+          }
+
+          const incoming = changed?.content ?? '';
+          if (!dashboardNoteIsDirty() || input.value === dashboardNoteSavedValue) {
+            input.value = incoming;
+            dashboardNoteSavedValue = incoming;
+            updateDashboardNoteStatus('saved', 'Updated from another device');
+            window.setTimeout(() => {
+              if (!dashboardNoteIsDirty()) updateDashboardNoteStatus('', '');
+            }, 1800);
+          } else if (incoming !== dashboardNoteSavedValue) {
+            dashboardNoteSavedValue = incoming;
+            updateDashboardNoteStatus('unsaved', 'Changed on another device — your local text is not saved');
+          }
+        })
+        .subscribe((status) => {
+          if (!status) return;
+          const normalized = (status?.type || status).toString();
+          if (/error|timed[_ -]?out|closed/i.test(normalized)) {
+            console.error('Dashboard notes Realtime status:', status);
+          }
+        });
+    }
 
     async function loadIdeas() {
       const { data, error } = await db.from('ideas').select('*').order('created_at', { ascending: false });
@@ -919,7 +1100,6 @@
     }
 
     $('topAddButton').addEventListener('click', () => leaveEditorIfAllowed(() => openIdeaPage()));
-    $('heroAddButton').addEventListener('click', () => leaveEditorIfAllowed(() => openIdeaPage()));
     $('backToIdeas').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('cancelPageButton').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('allIdeasNav').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
@@ -1051,6 +1231,18 @@
       if (action === 'delete' && button.dataset.id) deleteIdea(button.dataset.id);
     });
 
+    $('saveDashboardNoteButton').addEventListener('click', saveDashboardNote);
+    $('dashboardNoteInput').addEventListener('input', () => {
+      if (dashboardNoteIsDirty()) updateDashboardNoteStatus('unsaved', 'Unsaved changes');
+      else updateDashboardNoteStatus('', '');
+    });
+    $('dashboardNoteInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        saveDashboardNote();
+      }
+    });
+
     ['searchInput', 'statusFilter', 'categoryFilter'].forEach(id => {
       $(id).addEventListener(id === 'searchInput' ? 'input' : 'change', renderIdeas);
     });
@@ -1083,7 +1275,7 @@
     });
 
     window.addEventListener('beforeunload', (event) => {
-      if (!hasUnsavedChanges) return;
+      if (!hasUnsavedChanges && !dashboardNoteIsDirty()) return;
       event.preventDefault();
       event.returnValue = '';
     });

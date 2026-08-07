@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ideavault-v5';
+const CACHE_NAME = 'ideavault-v6';
 const APP_SHELL = [
   './',
   './index.html',

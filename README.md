@@ -1,19 +1,20 @@
-# IdeaVault — Collapsible Navigation PWA
+# IdeaVault — Dashboard Notes Layout
 
-This version changes the left navigation into a collapsible drawer on desktop and mobile.
+This version removes the purple dashboard hero and replaces the four-wide counter row with a 2×2 counter block beside a persistent Notes panel.
 
-## Navigation behavior
+## Dashboard notes
 
-- The sidebar is collapsed by default.
-- Use the ☰ button in the top-left to open it.
-- Selecting **All ideas** or an idea title navigates to that page and closes the sidebar.
-- Clicking outside the sidebar closes it.
-- Pressing **Escape** closes it.
-- Clicking the currently open idea closes the sidebar without reloading the idea.
-- Existing unsaved-change protection remains active. If navigation is cancelled because of unsaved changes, the page is not changed.
+- Type directly into the Notes panel.
+- Press **Enter** to save.
+- Press **Shift + Enter** to insert a new line.
+- You can also click **Save note**.
+- Notes are stored in Supabase and sync across open devices with Realtime.
+- If another device saves while you have unsaved local text, IdeaVault keeps your local text and warns you rather than overwriting it.
 
 ## Deployment
 
-Upload all project files to the GitHub repository used by Cloudflare Pages. The service-worker cache is bumped to `ideavault-v5`.
+1. Run `supabase.sql` in Supabase SQL Editor. This creates the `dashboard_notes` table, RLS policies and Realtime publication entry.
+2. Upload all files/folders to the GitHub repository used by Cloudflare Pages.
+3. The service worker cache is bumped to `ideavault-v6`.
 
-No new Supabase SQL is required for this UI change.
+Existing ideas, costing, full idea pages, collapsible navigation, PWA installation and unsaved idea-editor protection remain in place.
