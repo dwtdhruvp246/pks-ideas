@@ -113,11 +113,18 @@
     .message.error { color: var(--danger); }
     .message.success { color: var(--success); }
 
-    .app-shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+    .app-shell { min-height: 100vh; display: block; }
     .sidebar {
-      position: sticky; top: 0; height: 100vh; padding: 24px 18px;
+      position: fixed; top: 0; left: -285px; z-index: 50; width: 260px; height: 100vh; padding: 24px 18px;
       background: #151528; color: white; display: flex; flex-direction: column;
+      transition: left .24s ease; box-shadow: 20px 0 50px rgba(0,0,0,.18);
     }
+    .sidebar.open { left: 0; }
+    .sidebar-backdrop {
+      position: fixed; inset: 0; z-index: 45; background: rgba(15,23,42,.38);
+      opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .2s ease, visibility .2s ease;
+    }
+    .sidebar-backdrop.open { opacity: 1; visibility: visible; pointer-events: auto; }
     .sidebar .brand { padding: 4px 8px 28px; }
     .nav-label { color: #7f819b; font-size: 11px; font-weight: 800; letter-spacing: .12em; padding: 10px 12px; }
     .nav-item {
@@ -240,7 +247,11 @@
     .editor-footer .message { margin: 0; min-height: 18px; }
     .editor-footer-actions { display: flex; gap: 10px; margin-left: auto; }
 
-    .mobile-menu { display: none; }
+    .mobile-menu {
+      display: inline-grid; place-items: center; border: 1px solid var(--border); background: white;
+      width: 40px; height: 40px; border-radius: 11px; font-size: 20px; line-height: 1; color: var(--text);
+    }
+    .mobile-menu:hover { background: var(--surface-2); }
 
     .unsaved-indicator { display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 12px; font-weight: 800; white-space: nowrap; }
     .unsaved-indicator::before { content: '•'; font-size: 18px; line-height: 0; }
@@ -251,10 +262,6 @@
     @media (max-width: 800px) {
       .login-shell { grid-template-columns: 1fr; }
       .login-art { display: none; }
-      .app-shell { display: block; }
-      .sidebar { position: fixed; left: -280px; z-index: 40; width: 260px; transition: .25s ease; box-shadow: 20px 0 50px rgba(0,0,0,.2); }
-      .sidebar.open { left: 0; }
-      .mobile-menu { display: inline-grid; place-items: center; border: 1px solid var(--border); background: white; width: 40px; height: 40px; border-radius: 11px; }
       .topbar { padding: 0 18px; }
       .content { padding: 20px 16px; }
       .hero { align-items: flex-start; flex-direction: column; padding: 25px; }
@@ -308,7 +315,8 @@
   </section>
 
   <section id="appView" class="app-shell hidden">
-    <aside id="sidebar" class="sidebar">
+    <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+    <aside id="sidebar" class="sidebar" aria-hidden="true">
       <div class="brand"><span class="brand-mark">✦</span> IdeaVault</div>
       <div class="nav-label">WORKSPACE</div>
       <button id="allIdeasNav" class="nav-item active" type="button">◫ All ideas</button>
@@ -326,7 +334,7 @@
     <main class="main">
       <header class="topbar">
         <div style="display:flex; align-items:center; gap:12px;">
-          <button id="mobileMenu" class="mobile-menu" type="button">☰</button>
+          <button id="mobileMenu" class="mobile-menu" type="button" aria-label="Open navigation menu" aria-controls="sidebar" aria-expanded="false">☰</button>
           <h1 id="pageTitle">Website Ideas</h1>
         </div>
         <div class="top-actions">
@@ -850,7 +858,7 @@
       $('pageTitle').textContent = 'Website Ideas';
       $('allIdeasNav').classList.add('active');
       renderSidebarIdeas();
-      $('sidebar').classList.remove('open');
+      closeSidebar();
       history.replaceState(null, '', location.pathname + location.search);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -897,7 +905,7 @@
       ideaPage.classList.remove('hidden');
       $('allIdeasNav').classList.remove('active');
       renderSidebarIdeas();
-      $('sidebar').classList.remove('open');
+      closeSidebar();
       window.scrollTo({ top: 0, behavior: 'smooth' });
       if (idea?.id) history.replaceState(null, '', `#idea=${encodeURIComponent(idea.id)}`);
       else history.replaceState(null, '', '#new');
@@ -921,7 +929,12 @@
       const button = event.target.closest('[data-sidebar-idea]');
       if (!button) return;
       const idea = ideas.find((item) => item.id === button.dataset.sidebarIdea);
-      if (idea && idea.id !== activeIdeaId) leaveEditorIfAllowed(() => openIdeaPage(idea));
+      if (!idea) return;
+      if (idea.id === activeIdeaId) {
+        closeSidebar();
+        return;
+      }
+      leaveEditorIfAllowed(() => openIdeaPage(idea));
     });
 
     $('addCostButton').addEventListener('click', () => {
@@ -1042,7 +1055,27 @@
       $(id).addEventListener(id === 'searchInput' ? 'input' : 'change', renderIdeas);
     });
 
-    $('mobileMenu').addEventListener('click', () => $('sidebar').classList.toggle('open'));
+    function setSidebarOpen(open) {
+      const sidebar = $('sidebar');
+      const backdrop = $('sidebarBackdrop');
+      const menuButton = $('mobileMenu');
+      sidebar.classList.toggle('open', open);
+      backdrop.classList.toggle('open', open);
+      sidebar.setAttribute('aria-hidden', String(!open));
+      backdrop.setAttribute('aria-hidden', String(!open));
+      menuButton.setAttribute('aria-expanded', String(open));
+      menuButton.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+    }
+
+    function closeSidebar() { setSidebarOpen(false); }
+
+    $('mobileMenu').addEventListener('click', () => {
+      setSidebarOpen(!$('sidebar').classList.contains('open'));
+    });
+    $('sidebarBackdrop').addEventListener('click', closeSidebar);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && $('sidebar').classList.contains('open')) closeSidebar();
+    });
 
     db.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') showLogin();
