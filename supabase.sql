@@ -180,6 +180,20 @@ using (
 grant select, insert, update, delete on table public.idea_costs to authenticated;
 revoke all on table public.idea_costs from anon;
 
+
+-- Enable Realtime for costing too, so cost changes sync across devices.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'idea_costs'
+  ) then
+    alter publication supabase_realtime add table public.idea_costs;
+  end if;
+end $$;
+
 -- Enable Supabase Realtime for cross-device updates.
 -- The block is safe to run repeatedly.
 do $$

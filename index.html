@@ -624,6 +624,10 @@
     let isSavingDashboardNote = false;
     let personalNotes = [];
     let personalNotesRealtimeChannel = null;
+    let ideaCostsRealtimeChannel = null;
+    let liveSyncTimer = null;
+    let liveSyncBusy = false;
+    let reconnectTimer = null;
     let editingMyNoteId = null;
     let myNoteSavedSnapshot = '';
     let isSavingMyNote = false;
@@ -814,6 +818,8 @@
       subscribeToIdeaChanges();
       subscribeToDashboardNoteChanges();
       subscribeToPersonalNotesChanges();
+      subscribeToIdeaCostChanges();
+      startLiveSyncFallback();
       if (location.hash === '#notes') {
         showMyNotesPage();
         return;
@@ -829,6 +835,8 @@
       unsubscribeFromIdeaChanges();
       unsubscribeFromDashboardNoteChanges();
       unsubscribeFromPersonalNotesChanges();
+      unsubscribeFromIdeaCostChanges();
+      stopLiveSyncFallback();
       currentUser = null;
       ideas = [];
       appView.classList.add('hidden');
@@ -922,7 +930,15 @@
       }
 
       const value = data?.content || '';
-      $('dashboardNoteInput').value = value;
+      const input = $('dashboardNoteInput');
+      if (input && dashboardNoteIsDirty()) {
+        if (value !== dashboardNoteSavedValue) {
+          dashboardNoteSavedValue = value;
+          updateDashboardNoteStatus('unsaved', 'Changed on another device — your local text is not saved');
+        }
+        return;
+      }
+      if (input) input.value = value;
       dashboardNoteSavedValue = value;
       updateDashboardNoteStatus('', '');
     }
@@ -1016,13 +1032,7 @@
             updateDashboardNoteStatus('unsaved', 'Changed on another device — your local text is not saved');
           }
         })
-        .subscribe((status) => {
-          if (!status) return;
-          const normalized = (status?.type || status).toString();
-          if (/error|timed[_ -]?out|closed/i.test(normalized)) {
-            console.error('Dashboard notes Realtime status:', status);
-          }
-        });
+        .subscribe((status) => handleRealtimeStatus('Dashboard notes', status));
     }
 
     async function loadPersonalNotes() {
@@ -1215,11 +1225,135 @@
           }
           renderPersonalNotes();
         })
-        .subscribe((status) => {
-          if (!status) return;
-          const normalized = (status?.type || status).toString();
-          if (/error|timed[_ -]?out|closed/i.test(normalized)) console.error('My Notes Realtime status:', status);
-        });
+        .subscribe((status) => handleRealtimeStatus('My Notes', status));
+    }
+
+    function unsubscribeFromIdeaCostChanges() {
+      if (!ideaCostsRealtimeChannel) return;
+      try {
+        if (typeof ideaCostsRealtimeChannel.unsubscribe === 'function') ideaCostsRealtimeChannel.unsubscribe();
+        else if (db && typeof db.removeChannel === 'function') db.removeChannel(ideaCostsRealtimeChannel);
+      } catch (error) {
+        console.warn('Idea costs realtime cleanup failed', error);
+      } finally {
+        ideaCostsRealtimeChannel = null;
+      }
+    }
+
+    function subscribeToIdeaCostChanges() {
+      unsubscribeFromIdeaCostChanges();
+      if (!currentUser) return;
+      ideaCostsRealtimeChannel = db.channel(`idea-costs-live-${currentUser.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'idea_costs' }, () => {
+          if (!activeIdeaId) return;
+          if (hasUnsavedChanges) {
+            setMessage($('formMessage'), 'Costs changed on another device. Save or discard your local changes before refreshing this project.', 'error');
+            return;
+          }
+          refreshActiveIdeaFromServer('realtime-cost');
+        })
+        .subscribe((status) => handleRealtimeStatus('Idea costs', status));
+    }
+
+    function handleRealtimeStatus(label, status) {
+      if (!status) return;
+      const normalized = (status?.type || status).toString();
+      if (/error|timed[_ -]?out|closed/i.test(normalized)) {
+        console.warn(`${label} Realtime status:`, status);
+        scheduleRealtimeReconnect();
+      }
+    }
+
+    async function refreshActiveIdeaFromServer(reason = 'sync') {
+      if (!currentUser || !activeIdeaId || hasUnsavedChanges || isSavingIdea) return;
+      try {
+        const { data: freshIdea, error } = await db.from('ideas').select('*').eq('id', activeIdeaId).maybeSingle();
+        if (error) throw error;
+        if (!freshIdea) {
+          ideas = ideas.filter((item) => item.id !== activeIdeaId);
+          updateCategoryOptions(); renderSidebarIdeas(); renderIdeas(); showDashboard();
+          return;
+        }
+        const freshCosts = await loadIdeaCosts(activeIdeaId);
+        $('ideaTitle').value = freshIdea.title || '';
+        $('ideaCategory').value = freshIdea.category || '';
+        $('ideaStatus').value = freshIdea.status || 'Planning';
+        $('ideaPriority').value = freshIdea.priority || 'Medium';
+        $('ideaTargetUser').value = freshIdea.target_user || '';
+        $('ideaDescription').value = freshIdea.description || '';
+        $('ideaTechStack').value = freshIdea.tech_stack || '';
+        $('ideaSupabaseAccount').value = freshIdea.supabase_account || '';
+        $('ideaWebsiteUrl').value = freshIdea.website_url || '';
+        $('ideaGithubUrl').value = freshIdea.github_url || '';
+        $('ideaNotes').value = freshIdea.notes || '';
+        $('ideaNextStep').value = freshIdea.next_step || '';
+        $('ideaDueDate').value = freshIdea.due_date || '';
+        editingCosts = freshCosts;
+        renderCostRows();
+        $('ideaPageHeading').textContent = freshIdea.title;
+        $('pageTitle').textContent = freshIdea.title;
+        const idx = ideas.findIndex((item) => item.id === freshIdea.id);
+        if (idx >= 0) ideas[idx] = freshIdea; else ideas.unshift(freshIdea);
+        establishSavedSnapshot();
+        updateCategoryOptions(); renderSidebarIdeas(); renderIdeas();
+        if (reason !== 'fallback') {
+          setMessage($('formMessage'), 'Updated from another device.', 'success');
+          window.setTimeout(() => { if (!hasUnsavedChanges) setMessage($('formMessage')); }, 1600);
+        }
+      } catch (error) {
+        console.warn('Could not refresh active idea:', error);
+      }
+    }
+
+    async function syncFromServer(reason = 'fallback') {
+      if (!currentUser || liveSyncBusy || document.hidden || !navigator.onLine) return;
+      liveSyncBusy = true;
+      try {
+        await loadIdeas();
+        await loadDashboardNote();
+        await loadPersonalNotes();
+        await refreshActiveIdeaFromServer(reason);
+      } catch (error) {
+        console.warn('Background sync failed:', error);
+      } finally {
+        liveSyncBusy = false;
+      }
+    }
+
+    function startLiveSyncFallback() {
+      stopLiveSyncFallback();
+      liveSyncTimer = window.setInterval(() => syncFromServer('fallback'), 12000);
+    }
+
+    function stopLiveSyncFallback() {
+      if (liveSyncTimer) window.clearInterval(liveSyncTimer);
+      liveSyncTimer = null;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+
+    async function restartRealtimeSubscriptions() {
+      if (!currentUser) return;
+      try {
+        const { data } = await db.auth.getSession();
+        const token = data?.session?.access_token;
+        if (token && db.realtime && typeof db.realtime.setAuth === 'function') await db.realtime.setAuth(token);
+      } catch (error) {
+        console.warn('Could not refresh realtime auth:', error);
+      }
+      subscribeToIdeaChanges();
+      subscribeToDashboardNoteChanges();
+      subscribeToPersonalNotesChanges();
+      subscribeToIdeaCostChanges();
+    }
+
+    function scheduleRealtimeReconnect() {
+      if (!currentUser || reconnectTimer) return;
+      reconnectTimer = window.setTimeout(async () => {
+        reconnectTimer = null;
+        await restartRealtimeSubscriptions();
+        await syncFromServer('reconnect');
+      }, 1200);
     }
 
     async function loadIdeas() {
@@ -1380,15 +1514,15 @@
           updateCategoryOptions();
           renderSidebarIdeas();
           renderIdeas();
-          if (activeIdeaId === changedId && eventType === 'DELETE') showDashboard();
-        })
-        .subscribe((status) => {
-          if (!status) return;
-          const normalized = (status?.type || status).toString();
-          if (/error|timed[_ -]?out|closed/i.test(normalized)) {
-            console.error('Supabase Realtime status:', status);
+          if (activeIdeaId === changedId && eventType === 'DELETE') {
+            if (!hasUnsavedChanges) showDashboard();
+            else setMessage($('formMessage'), 'This project was deleted on another device. Your unsaved local changes are still on this screen.', 'error');
+          } else if (activeIdeaId === changedId) {
+            if (!hasUnsavedChanges) refreshActiveIdeaFromServer('realtime');
+            else setMessage($('formMessage'), 'This project changed on another device. Save or discard your local changes before syncing it.', 'error');
           }
-        });
+        })
+        .subscribe((status) => handleRealtimeStatus('Ideas', status));
     }
 
     function renderSidebarIdeas() {
@@ -1688,13 +1822,23 @@
 
     db.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') showLogin();
-      if (event === 'TOKEN_REFRESHED' && session?.user) currentUser = session.user;
+      if (event === 'TOKEN_REFRESHED' && session?.user) { currentUser = session.user; scheduleRealtimeReconnect(); }
     });
 
     window.addEventListener('beforeunload', (event) => {
       if (!hasUnsavedChanges && !dashboardNoteIsDirty() && !myNoteIsDirty()) return;
       event.preventDefault();
       event.returnValue = '';
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && currentUser) { scheduleRealtimeReconnect(); syncFromServer('resume'); }
+    });
+    window.addEventListener('focus', () => {
+      if (currentUser) { scheduleRealtimeReconnect(); syncFromServer('focus'); }
+    });
+    window.addEventListener('online', () => {
+      if (currentUser) { scheduleRealtimeReconnect(); syncFromServer('online'); }
     });
 
     let deferredInstallPrompt = null;

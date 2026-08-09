@@ -42,3 +42,15 @@ Run the latest `supabase.sql` before deploying because this version creates the 
 - Editing a saved note opens the same editor.
 - Saving a new or edited note refreshes the list and automatically collapses the editor.
 - **Cancel** or the × button closes the editor, with an unsaved-change warning when needed.
+
+
+## Live cross-device sync (v9)
+
+This build hardens synchronization across devices:
+- Realtime subscriptions for ideas, dashboard notes, My Notes, and idea costing.
+- Automatic reconnect after the app returns from the background, regains focus, or comes back online.
+- A 12-second background fallback refresh while the app is visible, so data still updates if a mobile browser suspends the Realtime socket.
+- Active project pages refresh automatically when there are no unsaved local edits.
+- Unsaved local edits are never silently overwritten by remote changes.
+
+Run the latest `supabase.sql` once so `idea_costs` is also included in the `supabase_realtime` publication.
