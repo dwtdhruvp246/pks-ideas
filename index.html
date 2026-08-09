@@ -285,12 +285,12 @@
 
     /* My Notes workspace */
     .my-notes-page { max-width: 1180px; margin: 0 auto; }
-    .my-notes-head { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin-bottom:22px; }
+    .my-notes-head { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:22px; flex-wrap:wrap; }
     .my-notes-head h2 { margin:0 0 6px; font-size:32px; letter-spacing:-1px; }
     .my-notes-head p { margin:0; color:var(--muted); }
-    .my-notes-layout { display:grid; grid-template-columns:minmax(320px,.85fr) minmax(0,1.4fr); gap:20px; align-items:start; }
+    .my-notes-layout { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; min-width:0; }
     .my-note-editor, .my-notes-library { background:white; border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 14px rgba(15,23,42,.035); }
-    .my-note-editor { padding:22px; position:sticky; top:96px; }
+    .my-note-editor { padding:22px; position:relative; min-width:0; }
     .my-note-editor h3, .my-notes-library h3 { margin:0; font-size:18px; }
     .my-note-editor-copy { color:var(--muted); font-size:12px; margin:5px 0 20px; line-height:1.5; }
     .my-note-content { min-height:250px; }
@@ -300,7 +300,7 @@
     .my-note-status { min-height:18px; font-size:12px; font-weight:700; color:var(--muted); }
     .my-note-status.unsaved { color:var(--warning); }
     .my-note-status.saved { color:var(--success); }
-    .my-notes-library { overflow:hidden; }
+    .my-notes-library { overflow:hidden; min-width:0; width:100%; }
     .my-notes-library-head { padding:20px; border-bottom:1px solid var(--border); }
     .my-notes-search { position:relative; margin-top:14px; }
     .my-notes-search input { padding-left:42px; }
@@ -310,8 +310,8 @@
     .saved-note { padding:20px; border-bottom:1px solid var(--border); }
     .saved-note:last-child { border-bottom:0; }
     .saved-note:hover { background:#fafaff; }
-    .saved-note-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
-    .saved-note h4 { margin:0; font-size:17px; line-height:1.35; }
+    .saved-note-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; min-width:0; }
+    .saved-note h4 { margin:0; font-size:17px; line-height:1.35; overflow-wrap:anywhere; }
     .saved-note-project { display:inline-flex; margin-top:8px; padding:5px 8px; border-radius:999px; background:#eef2ff; color:#4338ca; font-size:10px; font-weight:800; }
     .saved-note-content { margin:12px 0 0; color:#4b5563; font-size:13px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
     .saved-note-links { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
@@ -322,6 +322,19 @@
     .my-notes-empty { padding:54px 24px; text-align:center; color:var(--muted); }
     .my-notes-empty strong { display:block; color:var(--text); margin-bottom:6px; }
 
+    .my-note-editor.hidden { display:none !important; }
+    .my-notes-head-actions { display:flex; align-items:center; gap:10px; }
+    .my-note-editor-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:4px; }
+    .my-note-editor-head .close-note-editor { flex:0 0 auto; }
+
+    @media (max-width: 900px) {
+      .my-notes-page { max-width:100%; }
+      .my-notes-layout { grid-template-columns:minmax(0,1fr); gap:16px; }
+      .my-note-editor { position:relative; top:auto; width:100%; padding:18px; }
+      .my-notes-library { width:100%; }
+      .saved-note { padding:16px; }
+      .saved-note-content { font-size:13px; }
+    }
     @media (max-width: 1100px) {
       .dashboard-overview { grid-template-columns: minmax(380px, .9fr) minmax(0, 1.1fr); }
       .dashboard-overview .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -352,9 +365,20 @@
       .editor-footer { align-items: stretch; flex-direction: column; bottom: 8px; }
       .editor-footer-actions { width: 100%; margin-left: 0; }
       .editor-footer-actions .btn { flex: 1; }
-      .my-notes-head { align-items:flex-start; flex-direction:column; }
+      .my-notes-head { align-items:stretch; flex-direction:column; }
+      .my-notes-head-actions { width:100%; }
+      .my-notes-head-actions .btn { width:100%; }
+      .my-note-editor { padding:15px; }
+      .my-note-editor-head { align-items:flex-start; }
+      .my-note-actions { align-items:stretch; flex-direction:column; }
       .my-note-actions-right { width:100%; margin-left:0; }
       .my-note-actions-right .btn { flex:1; }
+      .my-notes-library-head { padding:15px; }
+      .saved-note-top { flex-direction:column; gap:10px; }
+      .saved-note-actions { width:100%; justify-content:flex-end; }
+      .saved-note-content { max-width:100%; }
+      .my-note-content { min-height:190px; }
+      .my-note-links { min-height:70px; }
     }
   </style>
 </head>
@@ -463,13 +487,21 @@
               <h2 id="myNotesHeading">My Notes</h2>
               <p>Save useful things you learn so you can reuse them in future projects.</p>
             </div>
+            <div class="my-notes-head-actions">
+              <button id="addMyNoteButton" class="btn btn-primary" type="button">＋ Add note</button>
+            </div>
           </div>
 
           <div class="my-notes-layout">
-            <form id="myNoteForm" class="my-note-editor">
+            <form id="myNoteForm" class="my-note-editor hidden">
               <input id="myNoteId" type="hidden" />
-              <h3 id="myNoteEditorHeading">Add a note</h3>
-              <p class="my-note-editor-copy">The project name and links are optional. Notes are saved separately from your dashboard to-do notes.</p>
+              <div class="my-note-editor-head">
+                <div>
+                  <h3 id="myNoteEditorHeading">Add a note</h3>
+                  <p class="my-note-editor-copy">The project name and links are optional. Notes are saved separately from your dashboard to-do notes.</p>
+                </div>
+                <button id="closeMyNoteEditorButton" class="icon-btn close-note-editor" type="button" aria-label="Close note editor" title="Close">×</button>
+              </div>
 
               <div class="field">
                 <label for="myNoteTitle">Title *</label>
@@ -490,7 +522,7 @@
               <div class="my-note-actions">
                 <span id="myNoteStatus" class="my-note-status" role="status" aria-live="polite"></span>
                 <div class="my-note-actions-right">
-                  <button id="clearMyNoteButton" class="btn btn-secondary" type="button">New / Clear</button>
+                  <button id="clearMyNoteButton" class="btn btn-secondary" type="button">Cancel</button>
                   <button id="saveMyNoteButton" class="btn btn-primary" type="submit">Save note</button>
                 </div>
               </div>
@@ -1058,22 +1090,40 @@
       updateMyNoteStatus('', '');
     }
 
+    function openMyNoteEditor(note = null) {
+      if (note) {
+        editingMyNoteId = note.id;
+        $('myNoteId').value = note.id;
+        $('myNoteTitle').value = note.title || '';
+        $('myNoteProject').value = note.project_title || '';
+        $('myNoteContent').value = note.content || '';
+        $('myNoteLinks').value = note.links || '';
+        $('myNoteEditorHeading').textContent = 'Edit note';
+        $('saveMyNoteButton').textContent = 'Save changes';
+      } else {
+        resetMyNoteEditor();
+      }
+      myNoteSavedSnapshot = getMyNoteSnapshot();
+      updateMyNoteStatus('', '');
+      $('myNoteForm').classList.remove('hidden');
+      $('addMyNoteButton').classList.add('hidden');
+      requestAnimationFrame(() => $('myNoteTitle').focus());
+    }
+
+    function closeMyNoteEditor(force = false) {
+      if (!force && myNoteIsDirty() && !window.confirm('Discard the unsaved changes in this note?')) return false;
+      resetMyNoteEditor();
+      $('myNoteForm').classList.add('hidden');
+      $('addMyNoteButton').classList.remove('hidden');
+      return true;
+    }
+
     function editPersonalNote(id) {
       const note = personalNotes.find(n => n.id === id);
       if (!note) return;
       if (myNoteIsDirty() && !window.confirm('Your current note has unsaved changes. Discard them and edit this note?')) return;
-      editingMyNoteId = note.id;
-      $('myNoteId').value = note.id;
-      $('myNoteTitle').value = note.title || '';
-      $('myNoteProject').value = note.project_title || '';
-      $('myNoteContent').value = note.content || '';
-      $('myNoteLinks').value = note.links || '';
-      $('myNoteEditorHeading').textContent = 'Edit note';
-      $('saveMyNoteButton').textContent = 'Save changes';
-      myNoteSavedSnapshot = getMyNoteSnapshot();
-      updateMyNoteStatus('', '');
-      $('myNoteTitle').focus();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      openMyNoteEditor(note);
+      $('myNoteForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     async function deletePersonalNote(id) {
@@ -1120,14 +1170,12 @@
       const idx = personalNotes.findIndex(n => n.id === saved.id);
       if (idx >= 0) personalNotes[idx] = saved; else personalNotes.unshift(saved);
       personalNotes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
-      editingMyNoteId = saved.id;
-      $('myNoteId').value = saved.id;
-      $('myNoteEditorHeading').textContent = 'Edit note';
-      button.textContent = 'Save changes';
       myNoteSavedSnapshot = getMyNoteSnapshot();
       updateMyNoteStatus('saved', 'Saved');
       renderPersonalNotes();
-      window.setTimeout(() => { if (!myNoteIsDirty()) updateMyNoteStatus('', ''); }, 1600);
+      window.setTimeout(() => {
+        closeMyNoteEditor(true);
+      }, 350);
     }
 
     function unsubscribeFromPersonalNotesChanges() {
@@ -1384,6 +1432,7 @@
       history.replaceState(null, '', '#notes');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       if (!myNoteSavedSnapshot) resetMyNoteEditor();
+      if (!editingMyNoteId && !myNoteIsDirty()) { $('myNoteForm').classList.add('hidden'); $('addMyNoteButton').classList.remove('hidden'); }
     }
 
     async function openIdeaPage(idea = null) {
@@ -1451,6 +1500,11 @@
     $('saveIdeaTopButton').addEventListener('click', () => $('ideaForm').requestSubmit());
     $('myNotesNav').addEventListener('click', () => leaveEditorIfAllowed(showMyNotesPage));
     $('myNoteForm').addEventListener('submit', savePersonalNote);
+    $('addMyNoteButton').addEventListener('click', () => {
+      if (myNoteIsDirty() && !$('myNoteForm').classList.contains('hidden') && !window.confirm('Discard the unsaved changes in this note?')) return;
+      openMyNoteEditor();
+    });
+    $('closeMyNoteEditorButton').addEventListener('click', () => closeMyNoteEditor());
     $('myNoteForm').addEventListener('input', refreshMyNoteDirtyState);
     $('myNoteForm').addEventListener('change', refreshMyNoteDirtyState);
     $('myNoteContent').addEventListener('keydown', (event) => {
@@ -1459,11 +1513,7 @@
         $('myNoteForm').requestSubmit();
       }
     });
-    $('clearMyNoteButton').addEventListener('click', () => {
-      if (myNoteIsDirty() && !window.confirm('Discard the unsaved changes in this note?')) return;
-      resetMyNoteEditor();
-      $('myNoteTitle').focus();
-    });
+    $('clearMyNoteButton').addEventListener('click', () => closeMyNoteEditor());
     $('myNotesSearch').addEventListener('input', renderPersonalNotes);
     $('myNotesList').addEventListener('click', (event) => {
       const button = event.target.closest('[data-note-action]');

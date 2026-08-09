@@ -33,3 +33,12 @@ Each saved note has:
 The page supports creating, editing, deleting, search across title/content, unsaved-change warnings, and Supabase Realtime cross-device syncing.
 
 Run the latest `supabase.sql` before deploying because this version creates the `personal_notes` table and its RLS/Realtime configuration. The PWA cache is `ideavault-v7`.
+
+## v8 — Responsive My Notes editor
+
+- My Notes now adapts to tablet and phone widths without overflowing the screen.
+- The note form is collapsed by default.
+- Use **+ Add note** to reveal the editor.
+- Editing a saved note opens the same editor.
+- Saving a new or edited note refreshes the list and automatically collapses the editor.
+- **Cancel** or the × button closes the editor, with an unsaved-change warning when needed.
