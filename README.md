@@ -18,3 +18,18 @@ This version removes the purple dashboard hero and replaces the four-wide counte
 3. The service worker cache is bumped to `ideavault-v6`.
 
 Existing ideas, costing, full idea pages, collapsible navigation, PWA installation and unsaved idea-editor protection remain in place.
+
+
+## My Notes workspace
+
+A separate **My Notes** page is now available under **Workspace**. It is independent from the quick dashboard Notes box.
+
+Each saved note has:
+- Title
+- Optional project/source title
+- Main content
+- Optional links (one per line)
+
+The page supports creating, editing, deleting, search across title/content, unsaved-change warnings, and Supabase Realtime cross-device syncing.
+
+Run the latest `supabase.sql` before deploying because this version creates the `personal_notes` table and its RLS/Realtime configuration. The PWA cache is `ideavault-v7`.

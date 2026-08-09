@@ -271,3 +271,81 @@ begin
     alter publication supabase_realtime add table public.dashboard_notes;
   end if;
 end $$;
+
+
+-- ============================================================
+-- MY NOTES
+-- Reusable knowledge/lessons saved independently of dashboard notes.
+-- ============================================================
+create table if not exists public.personal_notes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null check (char_length(title) between 1 and 160),
+  project_title text check (project_title is null or char_length(project_title) <= 160),
+  content text not null check (char_length(content) between 1 and 20000),
+  links text check (links is null or char_length(links) <= 2000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists personal_notes_user_id_idx on public.personal_notes(user_id);
+create index if not exists personal_notes_updated_at_idx on public.personal_notes(updated_at desc);
+
+drop trigger if exists personal_notes_set_updated_at on public.personal_notes;
+create trigger personal_notes_set_updated_at
+before update on public.personal_notes
+for each row execute function public.set_updated_at();
+
+alter table public.personal_notes enable row level security;
+
+drop policy if exists "Owner can view own personal notes" on public.personal_notes;
+drop policy if exists "Owner can add own personal notes" on public.personal_notes;
+drop policy if exists "Owner can update own personal notes" on public.personal_notes;
+drop policy if exists "Owner can delete own personal notes" on public.personal_notes;
+
+create policy "Owner can view own personal notes"
+on public.personal_notes for select to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can add own personal notes"
+on public.personal_notes for insert to authenticated
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can update own personal notes"
+on public.personal_notes for update to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+)
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can delete own personal notes"
+on public.personal_notes for delete to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+grant select, insert, update, delete on table public.personal_notes to authenticated;
+revoke all on table public.personal_notes from anon;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'personal_notes'
+  ) then
+    alter publication supabase_realtime add table public.personal_notes;
+  end if;
+end $$;

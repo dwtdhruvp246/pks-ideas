@@ -281,6 +281,47 @@
 
     .unsaved-indicator { display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 12px; font-weight: 800; white-space: nowrap; }
     .unsaved-indicator::before { content: '•'; font-size: 18px; line-height: 0; }
+
+
+    /* My Notes workspace */
+    .my-notes-page { max-width: 1180px; margin: 0 auto; }
+    .my-notes-head { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin-bottom:22px; }
+    .my-notes-head h2 { margin:0 0 6px; font-size:32px; letter-spacing:-1px; }
+    .my-notes-head p { margin:0; color:var(--muted); }
+    .my-notes-layout { display:grid; grid-template-columns:minmax(320px,.85fr) minmax(0,1.4fr); gap:20px; align-items:start; }
+    .my-note-editor, .my-notes-library { background:white; border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 14px rgba(15,23,42,.035); }
+    .my-note-editor { padding:22px; position:sticky; top:96px; }
+    .my-note-editor h3, .my-notes-library h3 { margin:0; font-size:18px; }
+    .my-note-editor-copy { color:var(--muted); font-size:12px; margin:5px 0 20px; line-height:1.5; }
+    .my-note-content { min-height:250px; }
+    .my-note-links { min-height:82px; }
+    .my-note-actions { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:6px; }
+    .my-note-actions-right { display:flex; gap:10px; margin-left:auto; }
+    .my-note-status { min-height:18px; font-size:12px; font-weight:700; color:var(--muted); }
+    .my-note-status.unsaved { color:var(--warning); }
+    .my-note-status.saved { color:var(--success); }
+    .my-notes-library { overflow:hidden; }
+    .my-notes-library-head { padding:20px; border-bottom:1px solid var(--border); }
+    .my-notes-search { position:relative; margin-top:14px; }
+    .my-notes-search input { padding-left:42px; }
+    .my-notes-search span { position:absolute; left:15px; top:50%; transform:translateY(-50%); color:var(--muted); }
+    .my-notes-count { margin-top:9px; color:var(--muted); font-size:12px; }
+    .my-notes-list { display:grid; }
+    .saved-note { padding:20px; border-bottom:1px solid var(--border); }
+    .saved-note:last-child { border-bottom:0; }
+    .saved-note:hover { background:#fafaff; }
+    .saved-note-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+    .saved-note h4 { margin:0; font-size:17px; line-height:1.35; }
+    .saved-note-project { display:inline-flex; margin-top:8px; padding:5px 8px; border-radius:999px; background:#eef2ff; color:#4338ca; font-size:10px; font-weight:800; }
+    .saved-note-content { margin:12px 0 0; color:#4b5563; font-size:13px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .saved-note-links { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .saved-note-link { color:var(--primary); font-size:12px; font-weight:700; text-decoration:none; }
+    .saved-note-link:hover { text-decoration:underline; }
+    .saved-note-meta { margin-top:13px; color:#9ca3af; font-size:11px; }
+    .saved-note-actions { display:flex; gap:7px; flex:0 0 auto; }
+    .my-notes-empty { padding:54px 24px; text-align:center; color:var(--muted); }
+    .my-notes-empty strong { display:block; color:var(--text); margin-bottom:6px; }
+
     @media (max-width: 1100px) {
       .dashboard-overview { grid-template-columns: minmax(380px, .9fr) minmax(0, 1.1fr); }
       .dashboard-overview .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -311,6 +352,9 @@
       .editor-footer { align-items: stretch; flex-direction: column; bottom: 8px; }
       .editor-footer-actions { width: 100%; margin-left: 0; }
       .editor-footer-actions .btn { flex: 1; }
+      .my-notes-head { align-items:flex-start; flex-direction:column; }
+      .my-note-actions-right { width:100%; margin-left:0; }
+      .my-note-actions-right .btn { flex:1; }
     }
   </style>
 </head>
@@ -352,6 +396,7 @@
       <div class="brand"><span class="brand-mark">✦</span> IdeaVault</div>
       <div class="nav-label">WORKSPACE</div>
       <button id="allIdeasNav" class="nav-item active" type="button">◫ All ideas</button>
+      <button id="myNotesNav" class="nav-item" type="button">▤ My Notes</button>
       <div class="nav-label ideas-nav-label">YOUR IDEAS</div>
       <div id="sidebarIdeas" class="sidebar-ideas" aria-label="Idea pages"></div>
       <div class="sidebar-bottom">
@@ -411,6 +456,56 @@
 
           <section id="ideasGrid" class="ideas-table-wrap"></section>
         </div>
+
+        <section id="myNotesPage" class="my-notes-page hidden" aria-labelledby="myNotesHeading">
+          <div class="my-notes-head">
+            <div>
+              <h2 id="myNotesHeading">My Notes</h2>
+              <p>Save useful things you learn so you can reuse them in future projects.</p>
+            </div>
+          </div>
+
+          <div class="my-notes-layout">
+            <form id="myNoteForm" class="my-note-editor">
+              <input id="myNoteId" type="hidden" />
+              <h3 id="myNoteEditorHeading">Add a note</h3>
+              <p class="my-note-editor-copy">The project name and links are optional. Notes are saved separately from your dashboard to-do notes.</p>
+
+              <div class="field">
+                <label for="myNoteTitle">Title *</label>
+                <input id="myNoteTitle" class="input" maxlength="160" required placeholder="e.g. Supabase RLS lesson" />
+              </div>
+              <div class="field">
+                <label for="myNoteProject">Project it came from <span style="font-weight:500;color:var(--muted);">(optional)</span></label>
+                <input id="myNoteProject" class="input" maxlength="160" placeholder="e.g. Mushavo" />
+              </div>
+              <div class="field">
+                <label for="myNoteContent">Content *</label>
+                <textarea id="myNoteContent" class="my-note-content" maxlength="20000" required placeholder="Write the useful information, lesson, code idea, process, or reminder you want to keep..."></textarea>
+              </div>
+              <div class="field">
+                <label for="myNoteLinks">Links <span style="font-weight:500;color:var(--muted);">(optional)</span></label>
+                <textarea id="myNoteLinks" class="my-note-links" maxlength="2000" placeholder="Paste one or more links, one per line..."></textarea>
+              </div>
+              <div class="my-note-actions">
+                <span id="myNoteStatus" class="my-note-status" role="status" aria-live="polite"></span>
+                <div class="my-note-actions-right">
+                  <button id="clearMyNoteButton" class="btn btn-secondary" type="button">New / Clear</button>
+                  <button id="saveMyNoteButton" class="btn btn-primary" type="submit">Save note</button>
+                </div>
+              </div>
+            </form>
+
+            <section class="my-notes-library" aria-label="Saved notes">
+              <div class="my-notes-library-head">
+                <h3>Saved notes</h3>
+                <div class="my-notes-search"><span>⌕</span><input id="myNotesSearch" class="input" type="search" placeholder="Search note titles or contents..." /></div>
+                <div id="myNotesCount" class="my-notes-count"></div>
+              </div>
+              <div id="myNotesList" class="my-notes-list"></div>
+            </section>
+          </div>
+        </section>
 
         <section id="ideaPage" class="idea-page hidden" aria-labelledby="ideaPageHeading">
           <div class="idea-page-head">
@@ -495,6 +590,11 @@
     let dashboardNoteRealtimeChannel = null;
     let dashboardNoteSavedValue = '';
     let isSavingDashboardNote = false;
+    let personalNotes = [];
+    let personalNotesRealtimeChannel = null;
+    let editingMyNoteId = null;
+    let myNoteSavedSnapshot = '';
+    let isSavingMyNote = false;
     let sortState = { key: 'title', direction: 'asc' };
     let editingCosts = [];
     let savedFormSnapshot = '';
@@ -507,6 +607,7 @@
     const ideasGrid = $('ideasGrid');
     const dashboardView = $('dashboardView');
     const ideaPage = $('ideaPage');
+    const myNotesPage = $('myNotesPage');
     let activeIdeaId = null;
 
     function setMessage(element, text = '', type = '') {
@@ -569,7 +670,7 @@
     }
 
     function confirmDiscardChanges() {
-      if (!hasUnsavedChanges) return true;
+      if (!hasUnsavedChanges && !myNoteIsDirty()) return true;
       return window.confirm('You have unsaved changes. If you leave this page now, those changes will be lost. Leave without saving?');
     }
 
@@ -578,6 +679,31 @@
       setUnsavedState(false);
       callback();
       return true;
+    }
+
+    function getMyNoteSnapshot() {
+      return JSON.stringify({
+        title: $('myNoteTitle')?.value || '',
+        project_title: $('myNoteProject')?.value || '',
+        content: $('myNoteContent')?.value || '',
+        links: $('myNoteLinks')?.value || ''
+      });
+    }
+
+    function myNoteIsDirty() {
+      return Boolean(myNotesPage && !myNotesPage.classList.contains('hidden') && getMyNoteSnapshot() !== myNoteSavedSnapshot);
+    }
+
+    function updateMyNoteStatus(state = '', message = '') {
+      const el = $('myNoteStatus');
+      if (!el) return;
+      el.className = `my-note-status ${state}`.trim();
+      el.textContent = message;
+    }
+
+    function refreshMyNoteDirtyState() {
+      if (isSavingMyNote) return;
+      updateMyNoteStatus(myNoteIsDirty() ? 'unsaved' : '', myNoteIsDirty() ? 'Unsaved changes' : '');
     }
 
     function safeUrl(value) {
@@ -652,8 +778,14 @@
       appView.classList.remove('hidden');
       await loadIdeas();
       await loadDashboardNote();
+      await loadPersonalNotes();
       subscribeToIdeaChanges();
       subscribeToDashboardNoteChanges();
+      subscribeToPersonalNotesChanges();
+      if (location.hash === '#notes') {
+        showMyNotesPage();
+        return;
+      }
       const hashMatch = location.hash.match(/^#idea=(.+)$/);
       if (hashMatch) {
         const idea = ideas.find((item) => item.id === decodeURIComponent(hashMatch[1]));
@@ -664,6 +796,7 @@
     function showLogin() {
       unsubscribeFromIdeaChanges();
       unsubscribeFromDashboardNoteChanges();
+      unsubscribeFromPersonalNotesChanges();
       currentUser = null;
       ideas = [];
       appView.classList.add('hidden');
@@ -676,7 +809,13 @@
       if ($('dashboardNoteInput')) $('dashboardNoteInput').value = '';
       dashboardNoteSavedValue = '';
       updateDashboardNoteStatus('');
-      if (dashboardView && ideaPage) { dashboardView.classList.remove('hidden'); ideaPage.classList.add('hidden'); }
+      personalNotes = [];
+      editingMyNoteId = null;
+      myNoteSavedSnapshot = '';
+      if ($('myNoteForm')) $('myNoteForm').reset();
+      if ($('myNotesList')) $('myNotesList').innerHTML = '';
+      updateMyNoteStatus('');
+      if (dashboardView && ideaPage && myNotesPage) { dashboardView.classList.remove('hidden'); ideaPage.classList.add('hidden'); myNotesPage.classList.add('hidden'); }
       renderIdeas();
     }
 
@@ -851,6 +990,187 @@
           if (/error|timed[_ -]?out|closed/i.test(normalized)) {
             console.error('Dashboard notes Realtime status:', status);
           }
+        });
+    }
+
+    async function loadPersonalNotes() {
+      if (!currentUser) return;
+      const { data, error } = await db.from('personal_notes').select('*').order('updated_at', { ascending: false });
+      if (error) {
+        console.error('Could not load My Notes:', error);
+        if ($('myNotesList')) $('myNotesList').innerHTML = `<div class="my-notes-empty"><strong>Could not load notes</strong>Run the latest Supabase SQL, then reload.</div>`;
+        return;
+      }
+      personalNotes = data || [];
+      renderPersonalNotes();
+    }
+
+    function filteredPersonalNotes() {
+      const query = ($('myNotesSearch')?.value || '').trim().toLowerCase();
+      if (!query) return [...personalNotes];
+      return personalNotes.filter((note) => `${note.title || ''} ${note.content || ''}`.toLowerCase().includes(query));
+    }
+
+    function renderNoteLinks(rawLinks) {
+      const values = String(rawLinks || '').split(/\r?\n|\s*,\s*/).map(v => v.trim()).filter(Boolean);
+      const safe = values.map(safeUrl).filter(Boolean);
+      return safe.map((url, index) => `<a class="saved-note-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">↗ Link${safe.length > 1 ? ` ${index + 1}` : ''}</a>`).join('');
+    }
+
+    function renderPersonalNotes() {
+      const container = $('myNotesList');
+      if (!container) return;
+      const list = filteredPersonalNotes();
+      const total = personalNotes.length;
+      $('myNotesCount').textContent = list.length === total ? `${total} ${total === 1 ? 'note' : 'notes'}` : `${list.length} of ${total} notes`;
+      if (!list.length) {
+        container.innerHTML = `<div class="my-notes-empty"><strong>${total ? 'No matching notes' : 'No notes saved yet'}</strong>${total ? 'Try a different search.' : 'Add your first reusable project note using the form.'}</div>`;
+        return;
+      }
+      container.innerHTML = list.map((note) => {
+        const links = renderNoteLinks(note.links);
+        const updated = note.updated_at ? new Intl.DateTimeFormat('en-GB', { day:'numeric', month:'short', year:'numeric' }).format(new Date(note.updated_at)) : '';
+        return `<article class="saved-note" data-note-id="${escapeAttr(note.id)}">
+          <div class="saved-note-top">
+            <div>
+              <h4>${escapeHtml(note.title)}</h4>
+              ${note.project_title ? `<span class="saved-note-project">${escapeHtml(note.project_title)}</span>` : ''}
+            </div>
+            <div class="saved-note-actions">
+              <button class="icon-btn" type="button" data-note-action="edit" data-id="${escapeAttr(note.id)}" title="Edit note" aria-label="Edit note">✎</button>
+              <button class="icon-btn" type="button" data-note-action="delete" data-id="${escapeAttr(note.id)}" title="Delete note" aria-label="Delete note">⌫</button>
+            </div>
+          </div>
+          <div class="saved-note-content">${escapeHtml(note.content)}</div>
+          ${links ? `<div class="saved-note-links">${links}</div>` : ''}
+          <div class="saved-note-meta">Updated ${escapeHtml(updated)}</div>
+        </article>`;
+      }).join('');
+    }
+
+    function resetMyNoteEditor() {
+      editingMyNoteId = null;
+      $('myNoteForm').reset();
+      $('myNoteId').value = '';
+      $('myNoteEditorHeading').textContent = 'Add a note';
+      $('saveMyNoteButton').textContent = 'Save note';
+      myNoteSavedSnapshot = getMyNoteSnapshot();
+      updateMyNoteStatus('', '');
+    }
+
+    function editPersonalNote(id) {
+      const note = personalNotes.find(n => n.id === id);
+      if (!note) return;
+      if (myNoteIsDirty() && !window.confirm('Your current note has unsaved changes. Discard them and edit this note?')) return;
+      editingMyNoteId = note.id;
+      $('myNoteId').value = note.id;
+      $('myNoteTitle').value = note.title || '';
+      $('myNoteProject').value = note.project_title || '';
+      $('myNoteContent').value = note.content || '';
+      $('myNoteLinks').value = note.links || '';
+      $('myNoteEditorHeading').textContent = 'Edit note';
+      $('saveMyNoteButton').textContent = 'Save changes';
+      myNoteSavedSnapshot = getMyNoteSnapshot();
+      updateMyNoteStatus('', '');
+      $('myNoteTitle').focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deletePersonalNote(id) {
+      const note = personalNotes.find(n => n.id === id);
+      if (!note || !window.confirm(`Delete “${note.title}”? This cannot be undone.`)) return;
+      const { error } = await db.from('personal_notes').delete().eq('id', id);
+      if (error) { alert(error.message); return; }
+      personalNotes = personalNotes.filter(n => n.id !== id);
+      if (editingMyNoteId === id) resetMyNoteEditor();
+      renderPersonalNotes();
+    }
+
+    async function savePersonalNote(event) {
+      event?.preventDefault();
+      if (!currentUser || isSavingMyNote) return;
+      const title = $('myNoteTitle').value.trim();
+      const content = $('myNoteContent').value.trim();
+      if (!title) { updateMyNoteStatus('unsaved', 'Please enter a title.'); $('myNoteTitle').focus(); return; }
+      if (!content) { updateMyNoteStatus('unsaved', 'Please enter the note content.'); $('myNoteContent').focus(); return; }
+
+      const payload = {
+        user_id: currentUser.id,
+        title,
+        project_title: $('myNoteProject').value.trim() || null,
+        content,
+        links: $('myNoteLinks').value.trim() || null
+      };
+      const button = $('saveMyNoteButton');
+      isSavingMyNote = true;
+      button.disabled = true;
+      button.textContent = 'Saving...';
+      updateMyNoteStatus('', 'Saving...');
+      const result = editingMyNoteId
+        ? await db.from('personal_notes').update(payload).eq('id', editingMyNoteId).select().single()
+        : await db.from('personal_notes').insert(payload).select().single();
+      isSavingMyNote = false;
+      button.disabled = false;
+      if (result.error) {
+        button.textContent = editingMyNoteId ? 'Save changes' : 'Save note';
+        updateMyNoteStatus('unsaved', result.error.message || 'Could not save note.');
+        return;
+      }
+      const saved = result.data;
+      const idx = personalNotes.findIndex(n => n.id === saved.id);
+      if (idx >= 0) personalNotes[idx] = saved; else personalNotes.unshift(saved);
+      personalNotes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+      editingMyNoteId = saved.id;
+      $('myNoteId').value = saved.id;
+      $('myNoteEditorHeading').textContent = 'Edit note';
+      button.textContent = 'Save changes';
+      myNoteSavedSnapshot = getMyNoteSnapshot();
+      updateMyNoteStatus('saved', 'Saved');
+      renderPersonalNotes();
+      window.setTimeout(() => { if (!myNoteIsDirty()) updateMyNoteStatus('', ''); }, 1600);
+    }
+
+    function unsubscribeFromPersonalNotesChanges() {
+      if (!personalNotesRealtimeChannel) return;
+      try {
+        if (typeof personalNotesRealtimeChannel.unsubscribe === 'function') personalNotesRealtimeChannel.unsubscribe();
+        else if (db && typeof db.removeChannel === 'function') db.removeChannel(personalNotesRealtimeChannel);
+      } catch (error) { console.warn('My Notes realtime cleanup failed', error); }
+      finally { personalNotesRealtimeChannel = null; }
+    }
+
+    function subscribeToPersonalNotesChanges() {
+      unsubscribeFromPersonalNotesChanges();
+      if (!currentUser) return;
+      personalNotesRealtimeChannel = db.channel(`personal-notes-live-${currentUser.id}`)
+        .on('postgres_changes', { event:'*', schema:'public', table:'personal_notes' }, (payload) => {
+          const evt = (payload?.eventType || payload?.type || '').toString().toUpperCase();
+          const changed = payload?.new || null;
+          const previous = payload?.old || null;
+          const id = changed?.id || previous?.id;
+          if (!id) return;
+          if (evt === 'DELETE') {
+            personalNotes = personalNotes.filter(n => n.id !== id);
+            if (editingMyNoteId === id && !myNoteIsDirty()) resetMyNoteEditor();
+          } else if (changed) {
+            const idx = personalNotes.findIndex(n => n.id === id);
+            if (idx >= 0) personalNotes[idx] = changed; else personalNotes.unshift(changed);
+            personalNotes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+            if (editingMyNoteId === id && !myNoteIsDirty()) {
+              $('myNoteTitle').value = changed.title || '';
+              $('myNoteProject').value = changed.project_title || '';
+              $('myNoteContent').value = changed.content || '';
+              $('myNoteLinks').value = changed.links || '';
+              myNoteSavedSnapshot = getMyNoteSnapshot();
+              updateMyNoteStatus('saved', 'Updated from another device');
+            }
+          }
+          renderPersonalNotes();
+        })
+        .subscribe((status) => {
+          if (!status) return;
+          const normalized = (status?.type || status).toString();
+          if (/error|timed[_ -]?out|closed/i.test(normalized)) console.error('My Notes Realtime status:', status);
         });
     }
 
@@ -1036,12 +1356,34 @@
       activeIdeaId = null;
       dashboardView.classList.remove('hidden');
       ideaPage.classList.add('hidden');
+      myNotesPage.classList.add('hidden');
       $('pageTitle').textContent = 'Website Ideas';
       $('allIdeasNav').classList.add('active');
+      $('myNotesNav').classList.remove('active');
+      $('topAddButton').classList.remove('hidden');
       renderSidebarIdeas();
       closeSidebar();
       history.replaceState(null, '', location.pathname + location.search);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+
+    function showMyNotesPage() {
+      setUnsavedState(false);
+      activeIdeaId = null;
+      dashboardView.classList.add('hidden');
+      ideaPage.classList.add('hidden');
+      myNotesPage.classList.remove('hidden');
+      $('pageTitle').textContent = 'My Notes';
+      $('allIdeasNav').classList.remove('active');
+      $('myNotesNav').classList.add('active');
+      $('topAddButton').classList.add('hidden');
+      renderSidebarIdeas();
+      renderPersonalNotes();
+      closeSidebar();
+      history.replaceState(null, '', '#notes');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (!myNoteSavedSnapshot) resetMyNoteEditor();
     }
 
     async function openIdeaPage(idea = null) {
@@ -1083,8 +1425,11 @@
       }
 
       dashboardView.classList.add('hidden');
+      myNotesPage.classList.add('hidden');
       ideaPage.classList.remove('hidden');
       $('allIdeasNav').classList.remove('active');
+      $('myNotesNav').classList.remove('active');
+      $('topAddButton').classList.remove('hidden');
       renderSidebarIdeas();
       closeSidebar();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1104,6 +1449,28 @@
     $('cancelPageButton').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('allIdeasNav').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('saveIdeaTopButton').addEventListener('click', () => $('ideaForm').requestSubmit());
+    $('myNotesNav').addEventListener('click', () => leaveEditorIfAllowed(showMyNotesPage));
+    $('myNoteForm').addEventListener('submit', savePersonalNote);
+    $('myNoteForm').addEventListener('input', refreshMyNoteDirtyState);
+    $('myNoteForm').addEventListener('change', refreshMyNoteDirtyState);
+    $('myNoteContent').addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        $('myNoteForm').requestSubmit();
+      }
+    });
+    $('clearMyNoteButton').addEventListener('click', () => {
+      if (myNoteIsDirty() && !window.confirm('Discard the unsaved changes in this note?')) return;
+      resetMyNoteEditor();
+      $('myNoteTitle').focus();
+    });
+    $('myNotesSearch').addEventListener('input', renderPersonalNotes);
+    $('myNotesList').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-note-action]');
+      if (!button) return;
+      if (button.dataset.noteAction === 'edit') editPersonalNote(button.dataset.id);
+      if (button.dataset.noteAction === 'delete') deletePersonalNote(button.dataset.id);
+    });
 
     $('sidebarIdeas').addEventListener('click', (event) => {
       const button = event.target.closest('[data-sidebar-idea]');
@@ -1275,7 +1642,7 @@
     });
 
     window.addEventListener('beforeunload', (event) => {
-      if (!hasUnsavedChanges && !dashboardNoteIsDirty()) return;
+      if (!hasUnsavedChanges && !dashboardNoteIsDirty() && !myNoteIsDirty()) return;
       event.preventDefault();
       event.returnValue = '';
     });
