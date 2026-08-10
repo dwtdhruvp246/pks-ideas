@@ -249,6 +249,21 @@
     .cost-remove { margin-top: 26px; width: 38px; height: 38px; border: 1px solid #fecaca; border-radius: 10px; background: #fff1f2; color: var(--danger); font-weight: 800; }
     .cost-empty { padding: 18px; text-align: center; border: 1px dashed #cfd4dc; border-radius: 12px; color: var(--muted); font-size: 13px; background: white; }
 
+    .test-accounts-section { border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; background: white; }
+    .test-accounts-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .test-accounts-head h3 { margin: 0; font-size: 15px; }
+    .test-accounts-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .test-account-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(220px, 1.35fr) 38px; gap: 10px; align-items: start; padding: 12px; margin-top: 10px; border: 1px solid var(--border); border-radius: 12px; background: white; }
+    .test-account-row .field { margin: 0; }
+    .test-account-row label { font-size: 11px; }
+    .credential-password-wrap { position: relative; }
+    .credential-password-wrap .input { padding-right: 44px; }
+    .credential-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border: 0; background: transparent; color: var(--muted); border-radius: 8px; }
+    .credential-toggle:hover { background: var(--surface-2); color: var(--primary); }
+    .test-account-remove { margin-top: 26px; width: 38px; height: 38px; border: 1px solid #fecaca; border-radius: 10px; background: #fff1f2; color: var(--danger); font-weight: 800; }
+    .test-account-empty { padding: 18px; text-align: center; border: 1px dashed #cfd4dc; border-radius: 12px; color: var(--muted); font-size: 13px; background: white; }
+    .security-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
     .ideas-nav-label { margin-top: 8px; }
     .sidebar-ideas { flex: 1 1 auto; overflow-y: auto; min-height: 0; padding-right: 3px; margin-bottom: 14px; }
     .sidebar-idea { width: 100%; border: 0; background: transparent; color: #b9bbcd; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; margin-bottom: 3px; text-align: left; font-weight: 600; font-size: 13px; }
@@ -360,6 +375,8 @@
       .span-2 { grid-column: span 1; }
       .cost-row { grid-template-columns: 1fr; }
       .cost-remove { margin-top: 0; width: 100%; }
+      .test-account-row { grid-template-columns: 1fr; }
+      .test-account-remove { margin-top: 0; width: 100%; }
       .hero h2 { font-size: 25px; }
       .editor-section { padding: 18px; }
       .editor-footer { align-items: stretch; flex-direction: column; bottom: 8px; }
@@ -578,6 +595,15 @@
               </div>
             </section>
 
+            <section class="editor-section test-accounts-section">
+              <div class="test-accounts-head">
+                <div><h3>Test accounts</h3><p>Store login details for accounts you use while testing this website.</p></div>
+                <button id="addTestAccountButton" class="btn btn-secondary" type="button">＋ Add account</button>
+              </div>
+              <div id="testAccountRows"></div>
+              <p class="security-note">Use this for test/development credentials only. Do not store production, banking, personal-email, or other sensitive passwords here.</p>
+            </section>
+
             <section class="editor-section">
               <div class="editor-section-title"><h3>Planning & notes</h3><p>Track what matters and what should happen next.</p></div>
               <div class="form-grid">
@@ -625,6 +651,8 @@
     let personalNotes = [];
     let personalNotesRealtimeChannel = null;
     let ideaCostsRealtimeChannel = null;
+    let ideaTestAccountsRealtimeChannel = null;
+    let editingTestAccounts = [];
     let liveSyncTimer = null;
     let liveSyncBusy = false;
     let reconnectTimer = null;
@@ -684,6 +712,11 @@
           cost_amount: String(cost.cost_amount ?? ''),
           billing_period: cost.billing_period || '',
           notes: cost.notes || ''
+        })),
+        test_accounts: collectTestAccountRows().map((account) => ({
+          username: account.username || '',
+          password: account.password || '',
+          notes: account.notes || ''
         }))
       };
       return JSON.stringify(formData);
@@ -803,6 +836,57 @@
       if (insertError) throw insertError;
     }
 
+
+    function createTestAccountRow(account = {}) {
+      const rowId = account.id || crypto.randomUUID();
+      return `<div class="test-account-row" data-test-account-row="${escapeAttr(rowId)}">
+        <div class="field"><label>Username / Email *</label><input class="input test-account-username" maxlength="250" autocomplete="off" placeholder="e.g. admin@test.com" value="${escapeAttr(account.username || '')}" /></div>
+        <div class="field"><label>Password *</label><div class="credential-password-wrap"><input class="input test-account-password" type="password" maxlength="500" autocomplete="new-password" placeholder="Test password" value="${escapeAttr(account.password || '')}" /><button class="credential-toggle" type="button" data-action="toggle-test-password" aria-label="Show password" title="Show password">👁</button></div></div>
+        <div class="field"><label>Note</label><input class="input test-account-notes" maxlength="1000" placeholder="e.g. Admin role / demo account" value="${escapeAttr(account.notes || '')}" /></div>
+        <button class="test-account-remove" type="button" title="Remove test account" aria-label="Remove test account">×</button>
+      </div>`;
+    }
+
+    function renderTestAccountRows(accounts = editingTestAccounts) {
+      const container = $('testAccountRows');
+      if (!container) return;
+      if (!accounts.length) {
+        container.innerHTML = '<div class="test-account-empty">No test accounts added yet.</div>';
+        return;
+      }
+      container.innerHTML = accounts.map(createTestAccountRow).join('');
+    }
+
+    function collectTestAccountRows() {
+      return [...document.querySelectorAll('[data-test-account-row]')].map((row) => ({
+        username: row.querySelector('.test-account-username').value.trim(),
+        password: row.querySelector('.test-account-password').value,
+        notes: row.querySelector('.test-account-notes').value.trim() || null
+      })).filter((account) => account.username || account.password || account.notes);
+    }
+
+    async function loadIdeaTestAccounts(ideaId) {
+      if (!ideaId) return [];
+      const { data, error } = await db.from('idea_test_accounts').select('*').eq('idea_id', ideaId).order('created_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function saveIdeaTestAccounts(ideaId, accounts) {
+      const { error: deleteError } = await db.from('idea_test_accounts').delete().eq('idea_id', ideaId);
+      if (deleteError) throw deleteError;
+      if (!accounts.length) return;
+      const rows = accounts.map((account) => ({
+        idea_id: ideaId,
+        user_id: currentUser.id,
+        username: account.username,
+        password: account.password,
+        notes: account.notes
+      }));
+      const { error: insertError } = await db.from('idea_test_accounts').insert(rows);
+      if (insertError) throw insertError;
+    }
+
     async function showApp(user) {
       if (!user || user.email?.toLowerCase() !== ALLOWED_EMAIL) {
         await db.auth.signOut();
@@ -819,6 +903,7 @@
       subscribeToDashboardNoteChanges();
       subscribeToPersonalNotesChanges();
       subscribeToIdeaCostChanges();
+      subscribeToIdeaTestAccountChanges();
       startLiveSyncFallback();
       if (location.hash === '#notes') {
         showMyNotesPage();
@@ -836,6 +921,7 @@
       unsubscribeFromDashboardNoteChanges();
       unsubscribeFromPersonalNotesChanges();
       unsubscribeFromIdeaCostChanges();
+      unsubscribeFromIdeaTestAccountChanges();
       stopLiveSyncFallback();
       currentUser = null;
       ideas = [];
@@ -1255,6 +1341,34 @@
         .subscribe((status) => handleRealtimeStatus('Idea costs', status));
     }
 
+
+    function unsubscribeFromIdeaTestAccountChanges() {
+      if (!ideaTestAccountsRealtimeChannel) return;
+      try {
+        if (typeof ideaTestAccountsRealtimeChannel.unsubscribe === 'function') ideaTestAccountsRealtimeChannel.unsubscribe();
+        else if (db && typeof db.removeChannel === 'function') db.removeChannel(ideaTestAccountsRealtimeChannel);
+      } catch (error) {
+        console.warn('Idea test accounts realtime cleanup failed', error);
+      } finally {
+        ideaTestAccountsRealtimeChannel = null;
+      }
+    }
+
+    function subscribeToIdeaTestAccountChanges() {
+      unsubscribeFromIdeaTestAccountChanges();
+      if (!currentUser) return;
+      ideaTestAccountsRealtimeChannel = db.channel(`idea-test-accounts-live-${currentUser.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'idea_test_accounts' }, () => {
+          if (!activeIdeaId) return;
+          if (hasUnsavedChanges) {
+            setMessage($('formMessage'), 'Test accounts changed on another device. Save or discard your local changes before refreshing this project.', 'error');
+            return;
+          }
+          refreshActiveIdeaFromServer('realtime-test-accounts');
+        })
+        .subscribe((status) => handleRealtimeStatus('Idea test accounts', status));
+    }
+
     function handleRealtimeStatus(label, status) {
       if (!status) return;
       const normalized = (status?.type || status).toString();
@@ -1275,6 +1389,7 @@
           return;
         }
         const freshCosts = await loadIdeaCosts(activeIdeaId);
+        const freshTestAccounts = await loadIdeaTestAccounts(activeIdeaId);
         $('ideaTitle').value = freshIdea.title || '';
         $('ideaCategory').value = freshIdea.category || '';
         $('ideaStatus').value = freshIdea.status || 'Planning';
@@ -1290,6 +1405,8 @@
         $('ideaDueDate').value = freshIdea.due_date || '';
         editingCosts = freshCosts;
         renderCostRows();
+        editingTestAccounts = freshTestAccounts;
+        renderTestAccountRows();
         $('ideaPageHeading').textContent = freshIdea.title;
         $('pageTitle').textContent = freshIdea.title;
         const idx = ideas.findIndex((item) => item.id === freshIdea.id);
@@ -1345,6 +1462,7 @@
       subscribeToDashboardNoteChanges();
       subscribeToPersonalNotesChanges();
       subscribeToIdeaCostChanges();
+      subscribeToIdeaTestAccountChanges();
     }
 
     function scheduleRealtimeReconnect() {
@@ -1575,6 +1693,8 @@
       $('ideaForm').reset();
       editingCosts = [];
       renderCostRows();
+      editingTestAccounts = [];
+      renderTestAccountRows();
       activeIdeaId = idea?.id || null;
       $('ideaId').value = idea?.id || '';
       $('ideaPageHeading').textContent = idea ? idea.title : 'New idea';
@@ -1602,8 +1722,10 @@
         try {
           editingCosts = await loadIdeaCosts(idea.id);
           renderCostRows();
+          editingTestAccounts = await loadIdeaTestAccounts(idea.id);
+          renderTestAccountRows();
         } catch (error) {
-          setMessage($('formMessage'), `Idea loaded, but costing could not be loaded: ${error.message}`, 'error');
+          setMessage($('formMessage'), `Idea loaded, but project extras could not be loaded: ${error.message}`, 'error');
         }
       }
 
@@ -1684,6 +1806,33 @@
       refreshUnsavedState();
     });
 
+
+    $('addTestAccountButton').addEventListener('click', () => {
+      editingTestAccounts = collectTestAccountRows();
+      editingTestAccounts.push({ username: '', password: '', notes: '' });
+      renderTestAccountRows();
+      refreshUnsavedState();
+    });
+
+    $('testAccountRows').addEventListener('click', (event) => {
+      const toggle = event.target.closest('[data-action="toggle-test-password"]');
+      if (toggle) {
+        const input = toggle.closest('.credential-password-wrap').querySelector('.test-account-password');
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        toggle.textContent = showing ? '👁' : '🙈';
+        toggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+        toggle.title = showing ? 'Show password' : 'Hide password';
+        return;
+      }
+      const remove = event.target.closest('.test-account-remove');
+      if (!remove) return;
+      remove.closest('[data-test-account-row]').remove();
+      editingTestAccounts = collectTestAccountRows();
+      renderTestAccountRows();
+      refreshUnsavedState();
+    });
+
     $('ideaForm').addEventListener('input', refreshUnsavedState);
     $('ideaForm').addEventListener('change', refreshUnsavedState);
 
@@ -1720,12 +1869,18 @@
           if (!cost.title) throw new Error('Each costing item needs a title.');
           if (cost.cost_amount === '' || Number(cost.cost_amount) < 0 || !Number.isFinite(Number(cost.cost_amount))) throw new Error('Each costing item needs a valid cost.');
         }
+        const testAccounts = collectTestAccountRows();
+        for (const account of testAccounts) {
+          if (!account.username) throw new Error('Each test account needs a username or email.');
+          if (!account.password) throw new Error('Each test account needs a password.');
+        }
         const result = id
           ? await db.from('ideas').update(payload).eq('id', id).select().single()
           : await db.from('ideas').insert(payload).select().single();
         if (result.error) throw result.error;
         const saved = result.data;
         await saveIdeaCosts(saved.id, costs);
+        await saveIdeaTestAccounts(saved.id, testAccounts);
         const existingIndex = ideas.findIndex((idea) => idea.id === saved.id);
         if (existingIndex >= 0) ideas[existingIndex] = saved;
         else ideas.unshift(saved);

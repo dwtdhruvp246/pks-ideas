@@ -363,3 +363,86 @@ begin
     alter publication supabase_realtime add table public.personal_notes;
   end if;
 end $$;
+
+
+-- ============================================================
+-- IDEA TEST ACCOUNTS
+-- Development/testing usernames and passwords attached to an idea.
+-- IMPORTANT: values are stored as application data. Use only test
+-- credentials, never production or high-value secrets.
+-- ============================================================
+create table if not exists public.idea_test_accounts (
+  id uuid primary key default gen_random_uuid(),
+  idea_id uuid not null references public.ideas(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  username text not null check (char_length(username) between 1 and 250),
+  password text not null check (char_length(password) between 1 and 500),
+  notes text check (notes is null or char_length(notes) <= 1000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idea_test_accounts_idea_id_idx on public.idea_test_accounts(idea_id);
+create index if not exists idea_test_accounts_user_id_idx on public.idea_test_accounts(user_id);
+
+drop trigger if exists idea_test_accounts_set_updated_at on public.idea_test_accounts;
+create trigger idea_test_accounts_set_updated_at
+before update on public.idea_test_accounts
+for each row execute function public.set_updated_at();
+
+alter table public.idea_test_accounts enable row level security;
+
+drop policy if exists "Owner can view own idea test accounts" on public.idea_test_accounts;
+drop policy if exists "Owner can add own idea test accounts" on public.idea_test_accounts;
+drop policy if exists "Owner can update own idea test accounts" on public.idea_test_accounts;
+drop policy if exists "Owner can delete own idea test accounts" on public.idea_test_accounts;
+
+create policy "Owner can view own idea test accounts"
+on public.idea_test_accounts for select to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+  and exists (select 1 from public.ideas i where i.id = idea_id and i.user_id = (select auth.uid()))
+);
+
+create policy "Owner can add own idea test accounts"
+on public.idea_test_accounts for insert to authenticated
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+  and exists (select 1 from public.ideas i where i.id = idea_id and i.user_id = (select auth.uid()))
+);
+
+create policy "Owner can update own idea test accounts"
+on public.idea_test_accounts for update to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+)
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+  and exists (select 1 from public.ideas i where i.id = idea_id and i.user_id = (select auth.uid()))
+);
+
+create policy "Owner can delete own idea test accounts"
+on public.idea_test_accounts for delete to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+grant select, insert, update, delete on table public.idea_test_accounts to authenticated;
+revoke all on table public.idea_test_accounts from anon;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'idea_test_accounts'
+  ) then
+    alter publication supabase_realtime add table public.idea_test_accounts;
+  end if;
+end $$;

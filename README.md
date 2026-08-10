@@ -54,3 +54,14 @@ This build hardens synchronization across devices:
 - Unsaved local edits are never silently overwritten by remote changes.
 
 Run the latest `supabase.sql` once so `idea_costs` is also included in the `supabase_realtime` publication.
+
+
+## Test accounts (v10)
+
+Each idea now has a **Test accounts** section for development/demo logins. You can add multiple entries with a username/email, password and note. Passwords are masked by default and can be shown per row. Test-account changes are included in Realtime and fallback cross-device sync.
+
+Run the latest `supabase.sql` once to create `public.idea_test_accounts` and its RLS/Realtime configuration.
+
+**Security:** this feature stores the supplied test passwords as database values. Use it only for low-value test/demo credentials. Do not store production passwords, personal email passwords, financial credentials, API secret keys, or other sensitive secrets.
+
+PWA cache: `ideavault-v10`.
