@@ -78,3 +78,13 @@ The PWA cache is `ideavault-v11`. No database schema change is required for this
 
 ## v12 draft-row stability fix
 Empty newly-added Test Account and Costing rows are treated as unsaved draft state. Background sync cannot redraw the active editor after any local interaction.
+
+
+## v13 — Direct route restore on refresh
+
+- Fixes the dashboard flash when refreshing `#idea=...`, `#notes`, or `#new`.
+- Supabase auth persistence was already enabled; the issue was view initialization order.
+- The app now captures the requested hash route first, loads required data while the authenticated UI remains hidden, applies the requested route, and only then reveals the app.
+- `#new` is now restored explicitly as well.
+- PWA cache bumped to `ideavault-v13`.
+- No database migration is required for this change.

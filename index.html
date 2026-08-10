@@ -895,33 +895,67 @@
       if (insertError) throw insertError;
     }
 
+    function getRequestedRoute() {
+      const hash = location.hash || '';
+      if (hash === '#notes') return { type: 'notes' };
+      if (hash === '#new') return { type: 'new' };
+      const ideaMatch = hash.match(/^#idea=(.+)$/);
+      if (ideaMatch) {
+        try { return { type: 'idea', id: decodeURIComponent(ideaMatch[1]) }; }
+        catch { return { type: 'dashboard' }; }
+      }
+      return { type: 'dashboard' };
+    }
+
+    async function applyRequestedRoute(route) {
+      if (route.type === 'notes') {
+        showMyNotesPage();
+        return;
+      }
+      if (route.type === 'new') {
+        await openIdeaPage();
+        return;
+      }
+      if (route.type === 'idea') {
+        const idea = ideas.find((item) => item.id === route.id);
+        if (idea) {
+          await openIdeaPage(idea);
+          return;
+        }
+      }
+      showDashboard();
+    }
+
     async function showApp(user) {
       if (!user || user.email?.toLowerCase() !== ALLOWED_EMAIL) {
         await db.auth.signOut();
         throw new Error('This account is not authorized.');
       }
+
+      // Capture the requested route before any view helper can change the URL.
+      const requestedRoute = getRequestedRoute();
       currentUser = user;
       $('signedInEmail').textContent = user.email;
+
+      // Keep both authenticated views hidden during bootstrap. Previously the app
+      // was revealed here while dashboardView was still the default visible view,
+      // which caused a dashboard flash before #idea / #notes routing completed.
       loginView.classList.add('hidden');
-      appView.classList.remove('hidden');
+      appView.classList.add('hidden');
+
       await loadIdeas();
-      await loadDashboardNote();
-      await loadPersonalNotes();
+      await Promise.all([loadDashboardNote(), loadPersonalNotes()]);
+      await applyRequestedRoute(requestedRoute);
+
+      // Reveal only after the correct route has been fully selected/loaded.
+      appView.classList.remove('hidden');
+
       subscribeToIdeaChanges();
       subscribeToDashboardNoteChanges();
       subscribeToPersonalNotesChanges();
       subscribeToIdeaCostChanges();
       subscribeToIdeaTestAccountChanges();
       startLiveSyncFallback();
-      if (location.hash === '#notes') {
-        showMyNotesPage();
-        return;
-      }
-      const hashMatch = location.hash.match(/^#idea=(.+)$/);
-      if (hashMatch) {
-        const idea = ideas.find((item) => item.id === decodeURIComponent(hashMatch[1]));
-        if (idea) await openIdeaPage(idea);
-      }
     }
 
     function showLogin() {
