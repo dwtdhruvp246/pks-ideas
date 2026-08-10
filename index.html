@@ -284,6 +284,21 @@
     .editor-section-title { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
     .editor-section-title h3 { margin: 0; font-size: 18px; }
     .editor-section-title p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .idea-section-nav {
+      position: sticky; top: 88px; z-index: 8; margin: 0 0 18px; padding: 8px;
+      display: flex; gap: 8px; overflow-x: auto; white-space: nowrap;
+      background: rgba(246,248,252,.94); backdrop-filter: blur(12px);
+      border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 8px 22px rgba(15,23,42,.06); scrollbar-width: thin;
+    }
+    .idea-section-nav button {
+      flex: 0 0 auto; border: 1px solid transparent; background: transparent; color: #4b5563;
+      border-radius: 10px; padding: 9px 12px; font-size: 12px; font-weight: 800;
+    }
+    .idea-section-nav button:hover { background: white; color: var(--primary); border-color: var(--border); }
+    .idea-section-nav button.active { background: var(--primary); color: white; }
+    .idea-editor-card > .editor-section { scroll-margin-top: 156px; }
+
     .editor-footer { position: sticky; bottom: 14px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: rgba(255,255,255,.95); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); }
     .editor-footer .message { margin: 0; min-height: 18px; }
     .editor-footer-actions { display: flex; gap: 10px; margin-left: auto; }
@@ -396,6 +411,9 @@
       .saved-note-content { max-width:100%; }
       .my-note-content { min-height:190px; }
       .my-note-links { min-height:70px; }
+      .idea-section-nav { top: 84px; margin-left: -2px; margin-right: -2px; }
+      .idea-section-nav button { padding: 8px 10px; font-size: 11px; }
+      .idea-editor-card > .editor-section { scroll-margin-top: 146px; }
     }
   </style>
 </head>
@@ -570,10 +588,18 @@
             </div>
           </div>
 
+          <nav id="ideaSectionNav" class="idea-section-nav" aria-label="Idea sections">
+            <button type="button" class="active" data-section-target="ideaSectionOverview">Overview</button>
+            <button type="button" data-section-target="ideaSectionInfrastructure">Infrastructure &amp; links</button>
+            <button type="button" data-section-target="ideaSectionTestAccounts">Test accounts</button>
+            <button type="button" data-section-target="ideaSectionPlanning">Planning &amp; notes</button>
+            <button type="button" data-section-target="ideaSectionCosting">Costing</button>
+          </nav>
+
           <form id="ideaForm" class="idea-editor-card">
             <input id="ideaId" type="hidden" />
 
-            <section class="editor-section">
+            <section id="ideaSectionOverview" class="editor-section">
               <div class="editor-section-title"><h3>Overview</h3><p>The main information about your idea.</p></div>
               <div class="form-grid">
                 <div class="field span-2"><label for="ideaTitle">Idea title *</label><input id="ideaTitle" class="input" maxlength="120" required placeholder="e.g. Restaurant QR ordering system" /></div>
@@ -585,7 +611,7 @@
               </div>
             </section>
 
-            <section class="editor-section">
+            <section id="ideaSectionInfrastructure" class="editor-section">
               <div class="editor-section-title"><h3>Infrastructure & links</h3><p>Keep your project services and URLs together.</p></div>
               <div class="form-grid">
                 <div class="field span-2"><label for="ideaTechStack">Tech stack</label><input id="ideaTechStack" class="input" maxlength="300" placeholder="Supabase, Cloudflare, n8n..." /></div>
@@ -595,7 +621,7 @@
               </div>
             </section>
 
-            <section class="editor-section test-accounts-section">
+            <section id="ideaSectionTestAccounts" class="editor-section test-accounts-section">
               <div class="test-accounts-head">
                 <div><h3>Test accounts</h3><p>Store login details for accounts you use while testing this website.</p></div>
                 <button id="addTestAccountButton" class="btn btn-secondary" type="button">＋ Add account</button>
@@ -604,7 +630,7 @@
               <p class="security-note">Use this for test/development credentials only. Do not store production, banking, personal-email, or other sensitive passwords here.</p>
             </section>
 
-            <section class="editor-section">
+            <section id="ideaSectionPlanning" class="editor-section">
               <div class="editor-section-title"><h3>Planning & notes</h3><p>Track what matters and what should happen next.</p></div>
               <div class="form-grid">
                 <div class="field span-2"><label for="ideaNotes">Private notes</label><textarea id="ideaNotes" maxlength="5000" placeholder="Research, pricing, competitors, next actions..."></textarea></div>
@@ -613,7 +639,7 @@
               </div>
             </section>
 
-            <section class="editor-section costing-section">
+            <section id="ideaSectionCosting" class="editor-section costing-section">
               <div class="costing-head">
                 <div><h3>Costing</h3><p>Add one or more expected project costs.</p></div>
                 <button id="addCostButton" class="btn btn-secondary" type="button">＋ Add cost</button>
@@ -1788,6 +1814,7 @@
       $('topAddButton').classList.remove('hidden');
       renderSidebarIdeas();
       closeSidebar();
+      setActiveIdeaSection('ideaSectionOverview');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       if (idea?.id) history.replaceState(null, '', `#idea=${encodeURIComponent(idea.id)}`);
       else history.replaceState(null, '', '#new');
@@ -1799,6 +1826,38 @@
       const idea = ideas.find((item) => item.id === id);
       if (idea) openIdeaPage(idea);
     }
+
+    function setActiveIdeaSection(sectionId) {
+      document.querySelectorAll('#ideaSectionNav [data-section-target]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.sectionTarget === sectionId);
+      });
+    }
+
+    function scrollToIdeaSection(sectionId) {
+      const section = $(sectionId);
+      if (!section) return;
+      setActiveIdeaSection(sectionId);
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    $('ideaSectionNav').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-section-target]');
+      if (!button) return;
+      scrollToIdeaSection(button.dataset.sectionTarget);
+    });
+
+    const ideaSectionObserver = new IntersectionObserver((entries) => {
+      if (ideaPage.classList.contains('hidden')) return;
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => Math.abs(a.boundingClientRect.top - 150) - Math.abs(b.boundingClientRect.top - 150));
+      if (visible.length) setActiveIdeaSection(visible[0].target.id);
+    }, { root: null, rootMargin: '-150px 0px -55% 0px', threshold: [0, 0.01, 0.1] });
+
+    ['ideaSectionOverview','ideaSectionInfrastructure','ideaSectionTestAccounts','ideaSectionPlanning','ideaSectionCosting'].forEach((id) => {
+      const section = $(id);
+      if (section) ideaSectionObserver.observe(section);
+    });
 
     $('topAddButton').addEventListener('click', () => leaveEditorIfAllowed(() => openIdeaPage()));
     $('backToIdeas').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
