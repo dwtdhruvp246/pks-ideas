@@ -74,3 +74,7 @@ Fixed a race condition where a background sync that started just before a local 
 The active idea refresh now re-checks the unsaved/saving state after all network requests finish and before changing any editor fields. Local unsaved edits therefore always win until you explicitly save or discard them.
 
 The PWA cache is `ideavault-v11`. No database schema change is required for this fix.
+
+
+## v12 draft-row stability fix
+Empty newly-added Test Account and Costing rows are treated as unsaved draft state. Background sync cannot redraw the active editor after any local interaction.

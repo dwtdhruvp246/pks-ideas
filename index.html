@@ -664,6 +664,7 @@
     let savedFormSnapshot = '';
     let hasUnsavedChanges = false;
     let isSavingIdea = false;
+    let editorDraftRevision = 0;
 
     const $ = (id) => document.getElementById(id);
     const loginView = $('loginView');
@@ -707,13 +708,13 @@
         notes: $('ideaNotes').value,
         next_step: $('ideaNextStep').value,
         due_date: $('ideaDueDate').value,
-        costs: collectCostRows().map((cost) => ({
+        costs: collectCostRows(true).map((cost) => ({
           title: cost.title || '',
           cost_amount: String(cost.cost_amount ?? ''),
           billing_period: cost.billing_period || '',
           notes: cost.notes || ''
         })),
-        test_accounts: collectTestAccountRows().map((account) => ({
+        test_accounts: collectTestAccountRows(true).map((account) => ({
           username: account.username || '',
           password: account.password || '',
           notes: account.notes || ''
@@ -731,6 +732,11 @@
     function establishSavedSnapshot() {
       savedFormSnapshot = getIdeaFormSnapshot();
       setUnsavedState(false);
+    }
+
+    function markEditorInteraction() {
+      editorDraftRevision += 1;
+      refreshUnsavedState();
     }
 
     function refreshUnsavedState() {
@@ -804,13 +810,14 @@
       container.innerHTML = costs.map(createCostRow).join('');
     }
 
-    function collectCostRows() {
-      return [...document.querySelectorAll('[data-cost-row]')].map((row) => ({
+    function collectCostRows(includeEmpty = false) {
+      const rows = [...document.querySelectorAll('[data-cost-row]')].map((row) => ({
         title: row.querySelector('.cost-title').value.trim(),
         cost_amount: row.querySelector('.cost-amount').value,
         billing_period: row.querySelector('.cost-period').value,
         notes: row.querySelector('.cost-notes').value.trim() || null
-      })).filter((cost) => cost.title || cost.cost_amount || cost.notes);
+      }));
+      return includeEmpty ? rows : rows.filter((cost) => cost.title || cost.cost_amount || cost.notes);
     }
 
     async function loadIdeaCosts(ideaId) {
@@ -857,12 +864,13 @@
       container.innerHTML = accounts.map(createTestAccountRow).join('');
     }
 
-    function collectTestAccountRows() {
-      return [...document.querySelectorAll('[data-test-account-row]')].map((row) => ({
+    function collectTestAccountRows(includeEmpty = false) {
+      const rows = [...document.querySelectorAll('[data-test-account-row]')].map((row) => ({
         username: row.querySelector('.test-account-username').value.trim(),
         password: row.querySelector('.test-account-password').value,
         notes: row.querySelector('.test-account-notes').value.trim() || null
-      })).filter((account) => account.username || account.password || account.notes);
+      }));
+      return includeEmpty ? rows : rows.filter((account) => account.username || account.password || account.notes);
     }
 
     async function loadIdeaTestAccounts(ideaId) {
@@ -1380,6 +1388,8 @@
 
     async function refreshActiveIdeaFromServer(reason = 'sync') {
       if (!currentUser || !activeIdeaId || hasUnsavedChanges || isSavingIdea) return;
+      const refreshIdeaId = activeIdeaId;
+      const refreshRevision = editorDraftRevision;
       try {
         const { data: freshIdea, error } = await db.from('ideas').select('*').eq('id', activeIdeaId).maybeSingle();
         if (error) throw error;
@@ -1394,7 +1404,7 @@
         // A background/realtime refresh may have started while the form was still clean,
         // then the user can begin editing before these network requests finish.
         // Never apply stale server data over local unsaved work.
-        if (hasUnsavedChanges || isSavingIdea || activeIdeaId !== freshIdea.id) return;
+        if (hasUnsavedChanges || isSavingIdea || activeIdeaId !== freshIdea.id || activeIdeaId !== refreshIdeaId || editorDraftRevision !== refreshRevision) return;
 
         $('ideaTitle').value = freshIdea.title || '';
         $('ideaCategory').value = freshIdea.category || '';
@@ -1696,6 +1706,7 @@
     async function openIdeaPage(idea = null) {
       setUnsavedState(false);
       savedFormSnapshot = '';
+      editorDraftRevision = 0;
       $('ideaForm').reset();
       editingCosts = [];
       renderCostRows();
@@ -1797,27 +1808,27 @@
     });
 
     $('addCostButton').addEventListener('click', () => {
-      editingCosts = collectCostRows();
+      editingCosts = collectCostRows(true);
       editingCosts.push({ title: '', cost_amount: '', billing_period: 'Monthly', notes: '' });
       renderCostRows();
-      refreshUnsavedState();
+      markEditorInteraction();
     });
 
     $('costRows').addEventListener('click', (event) => {
       const button = event.target.closest('.cost-remove');
       if (!button) return;
       button.closest('[data-cost-row]').remove();
-      editingCosts = collectCostRows();
+      editingCosts = collectCostRows(true);
       renderCostRows();
-      refreshUnsavedState();
+      markEditorInteraction();
     });
 
 
     $('addTestAccountButton').addEventListener('click', () => {
-      editingTestAccounts = collectTestAccountRows();
+      editingTestAccounts = collectTestAccountRows(true);
       editingTestAccounts.push({ username: '', password: '', notes: '' });
       renderTestAccountRows();
-      refreshUnsavedState();
+      markEditorInteraction();
     });
 
     $('testAccountRows').addEventListener('click', (event) => {
@@ -1834,13 +1845,13 @@
       const remove = event.target.closest('.test-account-remove');
       if (!remove) return;
       remove.closest('[data-test-account-row]').remove();
-      editingTestAccounts = collectTestAccountRows();
+      editingTestAccounts = collectTestAccountRows(true);
       renderTestAccountRows();
-      refreshUnsavedState();
+      markEditorInteraction();
     });
 
-    $('ideaForm').addEventListener('input', refreshUnsavedState);
-    $('ideaForm').addEventListener('change', refreshUnsavedState);
+    $('ideaForm').addEventListener('input', markEditorInteraction);
+    $('ideaForm').addEventListener('change', markEditorInteraction);
 
     $('ideaForm').addEventListener('submit', async (event) => {
       event.preventDefault();
