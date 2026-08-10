@@ -1390,6 +1390,12 @@
         }
         const freshCosts = await loadIdeaCosts(activeIdeaId);
         const freshTestAccounts = await loadIdeaTestAccounts(activeIdeaId);
+
+        // A background/realtime refresh may have started while the form was still clean,
+        // then the user can begin editing before these network requests finish.
+        // Never apply stale server data over local unsaved work.
+        if (hasUnsavedChanges || isSavingIdea || activeIdeaId !== freshIdea.id) return;
+
         $('ideaTitle').value = freshIdea.title || '';
         $('ideaCategory').value = freshIdea.category || '';
         $('ideaStatus').value = freshIdea.status || 'Planning';

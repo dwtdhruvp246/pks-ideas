@@ -65,3 +65,12 @@ Run the latest `supabase.sql` once to create `public.idea_test_accounts` and its
 **Security:** this feature stores the supplied test passwords as database values. Use it only for low-value test/demo credentials. Do not store production passwords, personal email passwords, financial credentials, API secret keys, or other sensitive secrets.
 
 PWA cache: `ideavault-v10`.
+
+
+## v11 — editor sync stability fix
+
+Fixed a race condition where a background sync that started just before a local edit could finish afterwards and redraw the project editor from Supabase. This was most visible when clicking **Add account** under Test Accounts: the new row could appear and then disappear.
+
+The active idea refresh now re-checks the unsaved/saving state after all network requests finish and before changing any editor fields. Local unsaved edits therefore always win until you explicitly save or discard them.
+
+The PWA cache is `ideavault-v11`. No database schema change is required for this fix.
