@@ -106,6 +106,14 @@
     .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
     .btn-full { width: 100%; }
     .top-actions { display: flex; align-items: center; gap: 10px; }
+    .idea-top-nav { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px; }
+    .idea-top-nav .btn { padding: 10px 14px; white-space: nowrap; }
+    .unsaved-nav-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(15,23,42,.52); display: grid; place-items: center; padding: 20px; }
+    .unsaved-nav-dialog { width: min(460px, 100%); background: white; border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 28px 80px rgba(15,23,42,.24); padding: 24px; }
+    .unsaved-nav-dialog h3 { margin: 0 0 8px; font-size: 20px; }
+    .unsaved-nav-dialog p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 14px; }
+    .unsaved-nav-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+    .btn-warning { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
     .install-btn { background: white; color: var(--primary); border: 1px solid #d9d9ee; }
     .install-btn:hover { background: #f5f5ff; }
     @media (display-mode: standalone) { .install-btn { display: none !important; } }
@@ -284,6 +292,21 @@
     .editor-section-title { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
     .editor-section-title h3 { margin: 0; font-size: 18px; }
     .editor-section-title p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .idea-section-nav {
+      position: sticky; top: 88px; z-index: 8; margin: 0 0 18px; padding: 8px;
+      display: flex; gap: 8px; overflow-x: auto; white-space: nowrap;
+      background: rgba(246,248,252,.94); backdrop-filter: blur(12px);
+      border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 8px 22px rgba(15,23,42,.06); scrollbar-width: thin;
+    }
+    .idea-section-nav button {
+      flex: 0 0 auto; border: 1px solid transparent; background: transparent; color: #4b5563;
+      border-radius: 10px; padding: 9px 12px; font-size: 12px; font-weight: 800;
+    }
+    .idea-section-nav button:hover { background: white; color: var(--primary); border-color: var(--border); }
+    .idea-section-nav button.active { background: var(--primary); color: white; }
+    .idea-editor-card > .editor-section { scroll-margin-top: 156px; }
+
     .editor-footer { position: sticky; bottom: 14px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: rgba(255,255,255,.95); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); }
     .editor-footer .message { margin: 0; min-height: 18px; }
     .editor-footer-actions { display: flex; gap: 10px; margin-left: auto; }
@@ -359,6 +382,8 @@
       .login-shell { grid-template-columns: 1fr; }
       .login-art { display: none; }
       .topbar { padding: 0 18px; }
+      .idea-top-nav { gap: 6px; margin: 0 8px; }
+      .idea-top-nav .btn { padding: 9px 10px; font-size: 12px; }
       .content { padding: 20px 16px; }
       .dashboard-overview { grid-template-columns: 1fr; }
       .dashboard-notes { min-height: 240px; }
@@ -367,6 +392,13 @@
       .idea-page-actions .btn { flex: 1; }
     }
     @media (max-width: 560px) {
+      .topbar { gap: 8px; }
+      .topbar h1 { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .idea-top-nav { flex: 1; margin: 0; justify-content: flex-end; }
+      .idea-top-nav .btn { padding: 8px 9px; font-size: 11px; }
+      .idea-top-nav .quick-nav-label-long { display: none; }
+      .unsaved-nav-actions { flex-direction: column-reverse; }
+      .unsaved-nav-actions .btn { width: 100%; }
       .toolbar, .form-grid { grid-template-columns: 1fr; }
       .dashboard-overview .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .dashboard-overview .stat-card { padding: 14px; min-height: 112px; }
@@ -396,26 +428,14 @@
       .saved-note-content { max-width:100%; }
       .my-note-content { min-height:190px; }
       .my-note-links { min-height:70px; }
+      .idea-section-nav { top: 84px; margin-left: -2px; margin-right: -2px; }
+      .idea-section-nav button { padding: 8px 10px; font-size: 11px; }
+      .idea-editor-card > .editor-section { scroll-margin-top: 146px; }
     }
-  
-    .auth-loading-screen {
-      position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
-      background: var(--bg); color: var(--text);
-    }
-    .auth-loading-card { display:flex; flex-direction:column; align-items:center; gap:14px; color:var(--muted); font-size:13px; font-weight:600; }
-    .auth-spinner { width:42px; height:42px; border:4px solid #e5e7eb; border-top-color:var(--primary); border-radius:50%; animation:authSpin .8s linear infinite; }
-    @keyframes authSpin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <section id="authLoadingView" class="auth-loading-screen" aria-live="polite" aria-busy="true">
-    <div class="auth-loading-card">
-      <div class="auth-spinner" aria-hidden="true"></div>
-      <span>Loading IdeaVault…</span>
-    </div>
-  </section>
-
-  <section id="loginView" class="login-shell hidden">
+  <section id="loginView" class="login-shell">
     <div class="login-art">
       <div class="brand"><span class="brand-mark">✦</span> IdeaVault</div>
       <div class="login-copy">
@@ -469,6 +489,10 @@
         <div style="display:flex; align-items:center; gap:12px;">
           <button id="mobileMenu" class="mobile-menu" type="button" aria-label="Open navigation menu" aria-controls="sidebar" aria-expanded="false">☰</button>
           <h1 id="pageTitle">Website Ideas</h1>
+        </div>
+        <div id="ideaTopNav" class="idea-top-nav hidden" aria-label="Idea page navigation">
+          <button id="topAllIdeasButton" class="btn btn-secondary" type="button">◫ <span class="quick-nav-label-long">All </span>Ideas</button>
+          <button id="topMyNotesButton" class="btn btn-secondary" type="button">▤ My Notes</button>
         </div>
         <div class="top-actions">
           <button id="installAppButton" class="btn install-btn hidden" type="button">⇩ Install app</button>
@@ -585,10 +609,18 @@
             </div>
           </div>
 
+          <nav id="ideaSectionNav" class="idea-section-nav" aria-label="Idea sections">
+            <button type="button" class="active" data-section-target="ideaSectionOverview">Overview</button>
+            <button type="button" data-section-target="ideaSectionInfrastructure">Infrastructure &amp; links</button>
+            <button type="button" data-section-target="ideaSectionTestAccounts">Test accounts</button>
+            <button type="button" data-section-target="ideaSectionPlanning">Planning &amp; notes</button>
+            <button type="button" data-section-target="ideaSectionCosting">Costing</button>
+          </nav>
+
           <form id="ideaForm" class="idea-editor-card">
             <input id="ideaId" type="hidden" />
 
-            <section class="editor-section">
+            <section id="ideaSectionOverview" class="editor-section">
               <div class="editor-section-title"><h3>Overview</h3><p>The main information about your idea.</p></div>
               <div class="form-grid">
                 <div class="field span-2"><label for="ideaTitle">Idea title *</label><input id="ideaTitle" class="input" maxlength="120" required placeholder="e.g. Restaurant QR ordering system" /></div>
@@ -600,7 +632,7 @@
               </div>
             </section>
 
-            <section class="editor-section">
+            <section id="ideaSectionInfrastructure" class="editor-section">
               <div class="editor-section-title"><h3>Infrastructure & links</h3><p>Keep your project services and URLs together.</p></div>
               <div class="form-grid">
                 <div class="field span-2"><label for="ideaTechStack">Tech stack</label><input id="ideaTechStack" class="input" maxlength="300" placeholder="Supabase, Cloudflare, n8n..." /></div>
@@ -610,7 +642,7 @@
               </div>
             </section>
 
-            <section class="editor-section test-accounts-section">
+            <section id="ideaSectionTestAccounts" class="editor-section test-accounts-section">
               <div class="test-accounts-head">
                 <div><h3>Test accounts</h3><p>Store login details for accounts you use while testing this website.</p></div>
                 <button id="addTestAccountButton" class="btn btn-secondary" type="button">＋ Add account</button>
@@ -619,7 +651,7 @@
               <p class="security-note">Use this for test/development credentials only. Do not store production, banking, personal-email, or other sensitive passwords here.</p>
             </section>
 
-            <section class="editor-section">
+            <section id="ideaSectionPlanning" class="editor-section">
               <div class="editor-section-title"><h3>Planning & notes</h3><p>Track what matters and what should happen next.</p></div>
               <div class="form-grid">
                 <div class="field span-2"><label for="ideaNotes">Private notes</label><textarea id="ideaNotes" maxlength="5000" placeholder="Research, pricing, competitors, next actions..."></textarea></div>
@@ -628,7 +660,7 @@
               </div>
             </section>
 
-            <section class="editor-section costing-section">
+            <section id="ideaSectionCosting" class="editor-section costing-section">
               <div class="costing-head">
                 <div><h3>Costing</h3><p>Add one or more expected project costs.</p></div>
                 <button id="addCostButton" class="btn btn-secondary" type="button">＋ Add cost</button>
@@ -648,6 +680,18 @@
       </div>
     </main>
   </section>
+
+  <div id="unsavedNavigationDialog" class="unsaved-nav-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="unsavedNavigationTitle">
+    <div class="unsaved-nav-dialog">
+      <h3 id="unsavedNavigationTitle">Unsaved changes</h3>
+      <p>You have changes that have not been saved. Would you like to save them before leaving this idea?</p>
+      <div class="unsaved-nav-actions">
+        <button id="cancelIdeaNavigationButton" class="btn btn-secondary" type="button">Cancel</button>
+        <button id="discardIdeaNavigationButton" class="btn btn-warning" type="button">Discard changes</button>
+        <button id="saveAndNavigateButton" class="btn btn-primary" type="button">Save &amp; continue</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const SUPABASE_URL = 'https://mevffvqrpsiiesfsutng.supabase.co';
@@ -680,9 +724,9 @@
     let hasUnsavedChanges = false;
     let isSavingIdea = false;
     let editorDraftRevision = 0;
+    let pendingIdeaNavigation = null;
 
     const $ = (id) => document.getElementById(id);
-    const authLoadingView = $('authLoadingView');
     const loginView = $('loginView');
     const appView = $('appView');
     const ideasGrid = $('ideasGrid');
@@ -765,8 +809,23 @@
       return window.confirm('You have unsaved changes. If you leave this page now, those changes will be lost. Leave without saving?');
     }
 
+    function openUnsavedNavigationDialog(callback) {
+      pendingIdeaNavigation = callback;
+      $('unsavedNavigationDialog').classList.remove('hidden');
+      requestAnimationFrame(() => $('saveAndNavigateButton').focus());
+    }
+
+    function closeUnsavedNavigationDialog() {
+      $('unsavedNavigationDialog').classList.add('hidden');
+    }
+
     function leaveEditorIfAllowed(callback) {
-      if (!confirmDiscardChanges()) return false;
+      const ideaEditorOpen = ideaPage && !ideaPage.classList.contains('hidden');
+      if (ideaEditorOpen && hasUnsavedChanges) {
+        openUnsavedNavigationDialog(callback);
+        return false;
+      }
+      if (myNoteIsDirty() && !window.confirm('You have unsaved changes. If you leave this page now, those changes will be lost. Leave without saving?')) return false;
       setUnsavedState(false);
       callback();
       return true;
@@ -942,17 +1001,11 @@
       showDashboard();
     }
 
-    function setAuthLoading(loading) {
-      if (authLoadingView) authLoadingView.classList.toggle('hidden', !loading);
-    }
-
     async function showApp(user) {
       if (!user || user.email?.toLowerCase() !== ALLOWED_EMAIL) {
         await db.auth.signOut();
         throw new Error('This account is not authorized.');
       }
-
-      setAuthLoading(true);
 
       // Capture the requested route before any view helper can change the URL.
       const requestedRoute = getRequestedRoute();
@@ -971,7 +1024,6 @@
 
       // Reveal only after the correct route has been fully selected/loaded.
       appView.classList.remove('hidden');
-      setAuthLoading(false);
 
       subscribeToIdeaChanges();
       subscribeToDashboardNoteChanges();
@@ -982,7 +1034,6 @@
     }
 
     function showLogin() {
-      setAuthLoading(false);
       unsubscribeFromIdeaChanges();
       unsubscribeFromDashboardNoteChanges();
       unsubscribeFromPersonalNotesChanges();
@@ -1012,23 +1063,13 @@
     }
 
     async function initializeAuth() {
-      setAuthLoading(true);
-      loginView.classList.add('hidden');
-      appView.classList.add('hidden');
-
-      try {
-        const { data, error } = await db.auth.getSession();
-        if (error) throw error;
-
-        if (data?.session?.user) {
-          await showApp(data.session.user);
-        } else {
-          showLogin();
-        }
-      } catch (err) {
-        console.error('Auth initialization failed:', err);
+      const { data, error } = await db.auth.getSession();
+      if (error) console.error(error);
+      if (data?.session?.user) {
+        try { await showApp(data.session.user); }
+        catch (err) { showLogin(); setMessage($('loginMessage'), err.message, 'error'); }
+      } else {
         showLogin();
-        setMessage($('loginMessage'), err.message || 'Unable to restore your session.', 'error');
       }
     }
 
@@ -1745,6 +1786,7 @@
       $('allIdeasNav').classList.add('active');
       $('myNotesNav').classList.remove('active');
       $('topAddButton').classList.remove('hidden');
+      $('ideaTopNav').classList.add('hidden');
       renderSidebarIdeas();
       closeSidebar();
       history.replaceState(null, '', location.pathname + location.search);
@@ -1762,6 +1804,7 @@
       $('allIdeasNav').classList.remove('active');
       $('myNotesNav').classList.add('active');
       $('topAddButton').classList.add('hidden');
+      $('ideaTopNav').classList.add('hidden');
       renderSidebarIdeas();
       renderPersonalNotes();
       closeSidebar();
@@ -1820,8 +1863,10 @@
       $('allIdeasNav').classList.remove('active');
       $('myNotesNav').classList.remove('active');
       $('topAddButton').classList.remove('hidden');
+      $('ideaTopNav').classList.remove('hidden');
       renderSidebarIdeas();
       closeSidebar();
+      setActiveIdeaSection('ideaSectionOverview');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       if (idea?.id) history.replaceState(null, '', `#idea=${encodeURIComponent(idea.id)}`);
       else history.replaceState(null, '', '#new');
@@ -1834,12 +1879,68 @@
       if (idea) openIdeaPage(idea);
     }
 
+    function setActiveIdeaSection(sectionId) {
+      document.querySelectorAll('#ideaSectionNav [data-section-target]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.sectionTarget === sectionId);
+      });
+    }
+
+    function scrollToIdeaSection(sectionId) {
+      const section = $(sectionId);
+      if (!section) return;
+      setActiveIdeaSection(sectionId);
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    $('ideaSectionNav').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-section-target]');
+      if (!button) return;
+      scrollToIdeaSection(button.dataset.sectionTarget);
+    });
+
+    const ideaSectionObserver = new IntersectionObserver((entries) => {
+      if (ideaPage.classList.contains('hidden')) return;
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => Math.abs(a.boundingClientRect.top - 150) - Math.abs(b.boundingClientRect.top - 150));
+      if (visible.length) setActiveIdeaSection(visible[0].target.id);
+    }, { root: null, rootMargin: '-150px 0px -55% 0px', threshold: [0, 0.01, 0.1] });
+
+    ['ideaSectionOverview','ideaSectionInfrastructure','ideaSectionTestAccounts','ideaSectionPlanning','ideaSectionCosting'].forEach((id) => {
+      const section = $(id);
+      if (section) ideaSectionObserver.observe(section);
+    });
+
     $('topAddButton').addEventListener('click', () => leaveEditorIfAllowed(() => openIdeaPage()));
     $('backToIdeas').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('cancelPageButton').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('allIdeasNav').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('saveIdeaTopButton').addEventListener('click', () => $('ideaForm').requestSubmit());
+    $('topAllIdeasButton').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
+    $('topMyNotesButton').addEventListener('click', () => leaveEditorIfAllowed(showMyNotesPage));
     $('myNotesNav').addEventListener('click', () => leaveEditorIfAllowed(showMyNotesPage));
+
+    $('cancelIdeaNavigationButton').addEventListener('click', () => {
+      pendingIdeaNavigation = null;
+      closeUnsavedNavigationDialog();
+    });
+    $('discardIdeaNavigationButton').addEventListener('click', () => {
+      const navigate = pendingIdeaNavigation;
+      pendingIdeaNavigation = null;
+      closeUnsavedNavigationDialog();
+      setUnsavedState(false);
+      if (navigate) navigate();
+    });
+    $('saveAndNavigateButton').addEventListener('click', () => {
+      closeUnsavedNavigationDialog();
+      $('ideaForm').requestSubmit();
+    });
+    $('unsavedNavigationDialog').addEventListener('click', (event) => {
+      if (event.target === $('unsavedNavigationDialog')) {
+        pendingIdeaNavigation = null;
+        closeUnsavedNavigationDialog();
+      }
+    });
     $('myNoteForm').addEventListener('submit', savePersonalNote);
     $('addMyNoteButton').addEventListener('click', () => {
       if (myNoteIsDirty() && !$('myNoteForm').classList.contains('hidden') && !window.confirm('Discard the unsaved changes in this note?')) return;
@@ -1981,6 +2082,12 @@
         establishSavedSnapshot();
         setMessage($('formMessage'), 'Saved successfully.', 'success');
         history.replaceState(null, '', `#idea=${encodeURIComponent(saved.id)}`);
+        if (pendingIdeaNavigation) {
+          const navigate = pendingIdeaNavigation;
+          pendingIdeaNavigation = null;
+          closeUnsavedNavigationDialog();
+          window.setTimeout(() => navigate(), 0);
+        }
       } catch (error) {
         setMessage($('formMessage'), error.message || 'Unable to save the idea.', 'error');
       } finally {
@@ -2057,6 +2164,11 @@
     });
     $('sidebarBackdrop').addEventListener('click', closeSidebar);
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !$('unsavedNavigationDialog').classList.contains('hidden')) {
+        pendingIdeaNavigation = null;
+        closeUnsavedNavigationDialog();
+        return;
+      }
       if (event.key === 'Escape' && $('sidebar').classList.contains('open')) closeSidebar();
     });
 
