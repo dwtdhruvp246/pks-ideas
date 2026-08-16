@@ -364,6 +364,14 @@
     .my-notes-head-actions { display:flex; align-items:center; gap:10px; }
     .my-note-editor-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:4px; }
     .my-note-editor-head .close-note-editor { flex:0 0 auto; }
+    .my-note-category-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:end; }
+    .my-note-new-category { display:flex; gap:10px; align-items:center; margin-top:10px; padding:12px; border:1px dashed #cfd4dc; border-radius:12px; background:#fbfcff; }
+    .my-note-new-category .input { flex:1; min-width:0; }
+    .my-notes-search-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; margin-top:14px; }
+    .my-notes-search-row .my-notes-search { margin-top:0; min-width:0; }
+    .my-notes-filter-panel { margin-top:10px; display:flex; align-items:end; gap:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:#fbfcff; }
+    .my-notes-filter-panel .field { margin:0; flex:1; }
+    .saved-note-category { display:inline-flex; margin-top:8px; margin-right:6px; padding:5px 8px; border-radius:999px; background:#f3e8ff; color:#7e22ce; font-size:10px; font-weight:800; }
 
     @media (max-width: 900px) {
       .my-notes-page { max-width:100%; }
@@ -428,6 +436,12 @@
       .saved-note-content { max-width:100%; }
       .my-note-content { min-height:190px; }
       .my-note-links { min-height:70px; }
+      .my-note-category-row { grid-template-columns:1fr; }
+      .my-note-new-category { align-items:stretch; flex-direction:column; }
+      .my-note-new-category .btn { width:100%; }
+      .my-notes-search-row { grid-template-columns:1fr; }
+      .my-notes-filter-panel { align-items:stretch; flex-direction:column; }
+      .my-notes-filter-panel .btn { width:100%; }
       .idea-section-nav { top: 84px; margin-left: -2px; margin-right: -2px; }
       .idea-section-nav button { padding: 8px 10px; font-size: 11px; }
       .idea-editor-card > .editor-section { scroll-margin-top: 146px; }
@@ -564,6 +578,18 @@
                 <input id="myNoteTitle" class="input" maxlength="160" required placeholder="e.g. Supabase RLS lesson" />
               </div>
               <div class="field">
+                <label for="myNoteCategory">Category <span style="font-weight:500;color:var(--muted);">(optional)</span></label>
+                <select id="myNoteCategory" aria-label="Note category">
+                  <option value="">No category</option>
+                  <option value="__add_new__">＋ Add category…</option>
+                </select>
+                <div id="myNoteNewCategory" class="my-note-new-category hidden">
+                  <input id="myNoteNewCategoryName" class="input" maxlength="80" placeholder="New category name" />
+                  <button id="saveMyNoteCategoryButton" class="btn btn-secondary" type="button">Add category</button>
+                  <button id="cancelMyNoteCategoryButton" class="btn btn-secondary" type="button">Cancel</button>
+                </div>
+              </div>
+              <div class="field">
                 <label for="myNoteProject">Project it came from <span style="font-weight:500;color:var(--muted);">(optional)</span></label>
                 <input id="myNoteProject" class="input" maxlength="160" placeholder="e.g. Mushavo" />
               </div>
@@ -587,7 +613,17 @@
             <section class="my-notes-library" aria-label="Saved notes">
               <div class="my-notes-library-head">
                 <h3>Saved notes</h3>
-                <div class="my-notes-search"><span>⌕</span><input id="myNotesSearch" class="input" type="search" placeholder="Search note titles or contents..." /></div>
+                <div class="my-notes-search-row">
+                  <div class="my-notes-search"><span>⌕</span><input id="myNotesSearch" class="input" type="search" placeholder="Search note titles or contents..." /></div>
+                  <button id="toggleMyNotesFilterButton" class="btn btn-secondary" type="button" aria-expanded="false">⚲ Filter</button>
+                </div>
+                <div id="myNotesFilterPanel" class="my-notes-filter-panel hidden">
+                  <div class="field">
+                    <label for="myNotesCategoryFilter">Category</label>
+                    <select id="myNotesCategoryFilter"><option value="">All categories</option></select>
+                  </div>
+                  <button id="clearMyNotesFilterButton" class="btn btn-secondary" type="button">Clear filter</button>
+                </div>
                 <div id="myNotesCount" class="my-notes-count"></div>
               </div>
               <div id="myNotesList" class="my-notes-list"></div>
@@ -708,7 +744,9 @@
     let dashboardNoteSavedValue = '';
     let isSavingDashboardNote = false;
     let personalNotes = [];
+    let personalNoteCategories = [];
     let personalNotesRealtimeChannel = null;
+    let personalNoteCategoriesRealtimeChannel = null;
     let ideaCostsRealtimeChannel = null;
     let ideaTestAccountsRealtimeChannel = null;
     let editingTestAccounts = [];
@@ -834,6 +872,7 @@
     function getMyNoteSnapshot() {
       return JSON.stringify({
         title: $('myNoteTitle')?.value || '',
+        category: $('myNoteCategory')?.value === '__add_new__' ? '' : ($('myNoteCategory')?.value || ''),
         project_title: $('myNoteProject')?.value || '',
         content: $('myNoteContent')?.value || '',
         links: $('myNoteLinks')?.value || ''
@@ -1019,7 +1058,7 @@
       appView.classList.add('hidden');
 
       await loadIdeas();
-      await Promise.all([loadDashboardNote(), loadPersonalNotes()]);
+      await Promise.all([loadDashboardNote(), loadPersonalNotes(), loadPersonalNoteCategories()]);
       await applyRequestedRoute(requestedRoute);
 
       // Reveal only after the correct route has been fully selected/loaded.
@@ -1028,6 +1067,7 @@
       subscribeToIdeaChanges();
       subscribeToDashboardNoteChanges();
       subscribeToPersonalNotesChanges();
+      subscribeToPersonalNoteCategoriesChanges();
       subscribeToIdeaCostChanges();
       subscribeToIdeaTestAccountChanges();
       startLiveSyncFallback();
@@ -1037,6 +1077,7 @@
       unsubscribeFromIdeaChanges();
       unsubscribeFromDashboardNoteChanges();
       unsubscribeFromPersonalNotesChanges();
+      unsubscribeFromPersonalNoteCategoriesChanges();
       unsubscribeFromIdeaCostChanges();
       unsubscribeFromIdeaTestAccountChanges();
       stopLiveSyncFallback();
@@ -1053,6 +1094,7 @@
       dashboardNoteSavedValue = '';
       updateDashboardNoteStatus('');
       personalNotes = [];
+      personalNoteCategories = [];
       editingMyNoteId = null;
       myNoteSavedSnapshot = '';
       if ($('myNoteForm')) $('myNoteForm').reset();
@@ -1238,6 +1280,66 @@
         .subscribe((status) => handleRealtimeStatus('Dashboard notes', status));
     }
 
+    async function loadPersonalNoteCategories() {
+      if (!currentUser) return;
+      const { data, error } = await db.from('personal_note_categories').select('*').order('name', { ascending: true });
+      if (error) {
+        console.error('Could not load note categories:', error);
+        return;
+      }
+      personalNoteCategories = data || [];
+      updatePersonalNoteCategoryOptions();
+    }
+
+    function updatePersonalNoteCategoryOptions() {
+      const editorSelect = $('myNoteCategory');
+      const filterSelect = $('myNotesCategoryFilter');
+      const editorValue = editorSelect?.value || '';
+      const filterValue = filterSelect?.value || '';
+      const names = [...new Set([
+        ...personalNoteCategories.map(c => c.name),
+        ...personalNotes.map(n => n.category).filter(Boolean)
+      ])].sort((a,b) => String(a).localeCompare(String(b), undefined, { sensitivity:'base' }));
+      if (editorSelect) {
+        editorSelect.innerHTML = '<option value="">No category</option>' + names.map(name => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('') + '<option value="__add_new__">＋ Add category…</option>';
+        if (names.includes(editorValue)) editorSelect.value = editorValue;
+      }
+      if (filterSelect) {
+        filterSelect.innerHTML = '<option value="">All categories</option>' + names.map(name => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('');
+        if (names.includes(filterValue)) filterSelect.value = filterValue;
+      }
+    }
+
+    async function addPersonalNoteCategory() {
+      const input = $('myNoteNewCategoryName');
+      const name = input.value.trim();
+      if (!name) { input.focus(); return; }
+      const existing = personalNoteCategories.find(c => c.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        updatePersonalNoteCategoryOptions();
+        $('myNoteCategory').value = existing.name;
+        $('myNoteNewCategory').classList.add('hidden');
+        input.value = '';
+        refreshMyNoteDirtyState();
+        return;
+      }
+      const button = $('saveMyNoteCategoryButton');
+      button.disabled = true;
+      const { data, error } = await db.from('personal_note_categories').insert({ user_id: currentUser.id, name }).select().single();
+      button.disabled = false;
+      if (error) {
+        updateMyNoteStatus('unsaved', error.message || 'Could not add category.');
+        return;
+      }
+      personalNoteCategories.push(data);
+      personalNoteCategories.sort((a,b) => a.name.localeCompare(b.name, undefined, { sensitivity:'base' }));
+      updatePersonalNoteCategoryOptions();
+      $('myNoteCategory').value = data.name;
+      $('myNoteNewCategory').classList.add('hidden');
+      input.value = '';
+      refreshMyNoteDirtyState();
+    }
+
     async function loadPersonalNotes() {
       if (!currentUser) return;
       const { data, error } = await db.from('personal_notes').select('*').order('updated_at', { ascending: false });
@@ -1247,13 +1349,18 @@
         return;
       }
       personalNotes = data || [];
+      updatePersonalNoteCategoryOptions();
       renderPersonalNotes();
     }
 
     function filteredPersonalNotes() {
       const query = ($('myNotesSearch')?.value || '').trim().toLowerCase();
-      if (!query) return [...personalNotes];
-      return personalNotes.filter((note) => `${note.title || ''} ${note.content || ''}`.toLowerCase().includes(query));
+      const category = $('myNotesCategoryFilter')?.value || '';
+      return personalNotes.filter((note) => {
+        const matchesSearch = !query || `${note.title || ''} ${note.content || ''}`.toLowerCase().includes(query);
+        const matchesCategory = !category || note.category === category;
+        return matchesSearch && matchesCategory;
+      });
     }
 
     function renderNoteLinks(rawLinks) {
@@ -1279,6 +1386,7 @@
           <div class="saved-note-top">
             <div>
               <h4>${escapeHtml(note.title)}</h4>
+              ${note.category ? `<span class="saved-note-category">${escapeHtml(note.category)}</span>` : ''}
               ${note.project_title ? `<span class="saved-note-project">${escapeHtml(note.project_title)}</span>` : ''}
             </div>
             <div class="saved-note-actions">
@@ -1296,6 +1404,10 @@
     function resetMyNoteEditor() {
       editingMyNoteId = null;
       $('myNoteForm').reset();
+      updatePersonalNoteCategoryOptions();
+      $('myNoteCategory').value = '';
+      $('myNoteNewCategory').classList.add('hidden');
+      $('myNoteNewCategoryName').value = '';
       $('myNoteId').value = '';
       $('myNoteEditorHeading').textContent = 'Add a note';
       $('saveMyNoteButton').textContent = 'Save note';
@@ -1308,6 +1420,8 @@
         editingMyNoteId = note.id;
         $('myNoteId').value = note.id;
         $('myNoteTitle').value = note.title || '';
+        updatePersonalNoteCategoryOptions();
+        $('myNoteCategory').value = note.category || '';
         $('myNoteProject').value = note.project_title || '';
         $('myNoteContent').value = note.content || '';
         $('myNoteLinks').value = note.links || '';
@@ -1360,6 +1474,7 @@
       const payload = {
         user_id: currentUser.id,
         title,
+        category: $('myNoteCategory').value && $('myNoteCategory').value !== '__add_new__' ? $('myNoteCategory').value : null,
         project_title: $('myNoteProject').value.trim() || null,
         content,
         links: $('myNoteLinks').value.trim() || null
@@ -1383,6 +1498,7 @@
       const idx = personalNotes.findIndex(n => n.id === saved.id);
       if (idx >= 0) personalNotes[idx] = saved; else personalNotes.unshift(saved);
       personalNotes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+      updatePersonalNoteCategoryOptions();
       myNoteSavedSnapshot = getMyNoteSnapshot();
       updateMyNoteStatus('saved', 'Saved');
       renderPersonalNotes();
@@ -1419,6 +1535,8 @@
             personalNotes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
             if (editingMyNoteId === id && !myNoteIsDirty()) {
               $('myNoteTitle').value = changed.title || '';
+              updatePersonalNoteCategoryOptions();
+              $('myNoteCategory').value = changed.category || '';
               $('myNoteProject').value = changed.project_title || '';
               $('myNoteContent').value = changed.content || '';
               $('myNoteLinks').value = changed.links || '';
@@ -1426,9 +1544,30 @@
               updateMyNoteStatus('saved', 'Updated from another device');
             }
           }
+          updatePersonalNoteCategoryOptions();
           renderPersonalNotes();
         })
         .subscribe((status) => handleRealtimeStatus('My Notes', status));
+    }
+
+    function unsubscribeFromPersonalNoteCategoriesChanges() {
+      if (!personalNoteCategoriesRealtimeChannel) return;
+      try {
+        if (typeof personalNoteCategoriesRealtimeChannel.unsubscribe === 'function') personalNoteCategoriesRealtimeChannel.unsubscribe();
+        else if (db && typeof db.removeChannel === 'function') db.removeChannel(personalNoteCategoriesRealtimeChannel);
+      } catch (error) { console.warn('Note categories realtime cleanup failed', error); }
+      finally { personalNoteCategoriesRealtimeChannel = null; }
+    }
+
+    function subscribeToPersonalNoteCategoriesChanges() {
+      unsubscribeFromPersonalNoteCategoriesChanges();
+      if (!currentUser) return;
+      personalNoteCategoriesRealtimeChannel = db.channel(`personal-note-categories-live-${currentUser.id}`)
+        .on('postgres_changes', { event:'*', schema:'public', table:'personal_note_categories' }, async () => {
+          await loadPersonalNoteCategories();
+          renderPersonalNotes();
+        })
+        .subscribe((status) => handleRealtimeStatus('Note categories', status));
     }
 
     function unsubscribeFromIdeaCostChanges() {
@@ -1554,6 +1693,7 @@
         await loadIdeas();
         await loadDashboardNote();
         await loadPersonalNotes();
+        await loadPersonalNoteCategories();
         await refreshActiveIdeaFromServer(reason);
       } catch (error) {
         console.warn('Background sync failed:', error);
@@ -1586,6 +1726,7 @@
       subscribeToIdeaChanges();
       subscribeToDashboardNoteChanges();
       subscribeToPersonalNotesChanges();
+      subscribeToPersonalNoteCategoriesChanges();
       subscribeToIdeaCostChanges();
       subscribeToIdeaTestAccountChanges();
     }
@@ -1949,6 +2090,26 @@
     $('closeMyNoteEditorButton').addEventListener('click', () => closeMyNoteEditor());
     $('myNoteForm').addEventListener('input', refreshMyNoteDirtyState);
     $('myNoteForm').addEventListener('change', refreshMyNoteDirtyState);
+    $('myNoteCategory').addEventListener('change', () => {
+      if ($('myNoteCategory').value === '__add_new__') {
+        $('myNoteNewCategory').classList.remove('hidden');
+        $('myNoteNewCategoryName').focus();
+      } else {
+        $('myNoteNewCategory').classList.add('hidden');
+        $('myNoteNewCategoryName').value = '';
+      }
+      refreshMyNoteDirtyState();
+    });
+    $('saveMyNoteCategoryButton').addEventListener('click', addPersonalNoteCategory);
+    $('myNoteNewCategoryName').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); addPersonalNoteCategory(); }
+    });
+    $('cancelMyNoteCategoryButton').addEventListener('click', () => {
+      $('myNoteNewCategory').classList.add('hidden');
+      $('myNoteNewCategoryName').value = '';
+      $('myNoteCategory').value = '';
+      refreshMyNoteDirtyState();
+    });
     $('myNoteContent').addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         event.preventDefault();
@@ -1957,6 +2118,17 @@
     });
     $('clearMyNoteButton').addEventListener('click', () => closeMyNoteEditor());
     $('myNotesSearch').addEventListener('input', renderPersonalNotes);
+    $('myNotesCategoryFilter').addEventListener('change', renderPersonalNotes);
+    $('toggleMyNotesFilterButton').addEventListener('click', () => {
+      const panel = $('myNotesFilterPanel');
+      const opening = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !opening);
+      $('toggleMyNotesFilterButton').setAttribute('aria-expanded', String(opening));
+    });
+    $('clearMyNotesFilterButton').addEventListener('click', () => {
+      $('myNotesCategoryFilter').value = '';
+      renderPersonalNotes();
+    });
     $('myNotesList').addEventListener('click', (event) => {
       const button = event.target.closest('[data-note-action]');
       if (!button) return;

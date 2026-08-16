@@ -446,3 +446,88 @@ begin
     alter publication supabase_realtime add table public.idea_test_accounts;
   end if;
 end $$;
+
+-- ============================================================
+-- MY NOTES CATEGORIES (v14)
+-- Adds reusable categories and an optional category on each personal note.
+-- Safe to run more than once.
+-- ============================================================
+alter table public.personal_notes
+add column if not exists category text;
+
+alter table public.personal_notes
+drop constraint if exists personal_notes_category_check;
+
+alter table public.personal_notes
+add constraint personal_notes_category_check
+check (category is null or char_length(category) <= 80);
+
+create index if not exists personal_notes_category_idx
+on public.personal_notes(user_id, category);
+
+create table if not exists public.personal_note_categories (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 80),
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists personal_note_categories_user_name_unique
+on public.personal_note_categories(user_id, lower(name));
+
+create index if not exists personal_note_categories_user_id_idx
+on public.personal_note_categories(user_id);
+
+alter table public.personal_note_categories enable row level security;
+
+drop policy if exists "Owner can view own personal note categories" on public.personal_note_categories;
+drop policy if exists "Owner can add own personal note categories" on public.personal_note_categories;
+drop policy if exists "Owner can update own personal note categories" on public.personal_note_categories;
+drop policy if exists "Owner can delete own personal note categories" on public.personal_note_categories;
+
+create policy "Owner can view own personal note categories"
+on public.personal_note_categories for select to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can add own personal note categories"
+on public.personal_note_categories for insert to authenticated
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can update own personal note categories"
+on public.personal_note_categories for update to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+)
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+create policy "Owner can delete own personal note categories"
+on public.personal_note_categories for delete to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'dhruvp246@gmail.com'
+);
+
+grant select, insert, update, delete on table public.personal_note_categories to authenticated;
+revoke all on table public.personal_note_categories from anon;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'personal_note_categories'
+  ) then
+    alter publication supabase_realtime add table public.personal_note_categories;
+  end if;
+end $$;
