@@ -182,14 +182,27 @@
     .dashboard-notes {
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 20px; box-shadow: 0 4px 14px rgba(15,23,42,.035);
-      display: flex; flex-direction: column; min-height: 280px;
+      display: flex; flex-direction: column; min-height: 280px; min-width: 0;
+      transition: min-height .2s ease, grid-column .2s ease;
+    }
+    .dashboard-notes.expanded {
+      grid-column: 1 / -1;
+      min-height: min(72vh, 760px);
+    }
+    .dashboard-notes.expanded .dashboard-note-textarea {
+      min-height: min(56vh, 620px);
+    }
+    .dashboard-note-expand {
+      flex: 0 0 auto;
+      padding: 8px 11px;
+      font-size: 12px;
     }
     .dashboard-notes-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
     .dashboard-notes-head h3 { margin: 0; font-size: 17px; }
     .dashboard-notes-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
     .dashboard-note-textarea {
       flex: 1; min-height: 158px; resize: vertical; line-height: 1.55;
-      background: #fbfcff;
+      background: #fbfcff; overflow: auto; max-height: none;
     }
     .dashboard-note-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
     .dashboard-note-status { min-height: 18px; color: var(--muted); font-size: 12px; font-weight: 600; }
@@ -395,6 +408,13 @@
       .content { padding: 20px 16px; }
       .dashboard-overview { grid-template-columns: 1fr; }
       .dashboard-notes { min-height: 240px; }
+      .dashboard-notes.expanded {
+        grid-column: 1;
+        min-height: 72vh;
+      }
+      .dashboard-notes.expanded .dashboard-note-textarea {
+        min-height: 58vh;
+      }
       .idea-page-head { align-items: flex-start; flex-direction: column; }
       .idea-page-actions { width: 100%; }
       .idea-page-actions .btn { flex: 1; }
@@ -412,6 +432,10 @@
       .dashboard-overview .stat-card { padding: 14px; min-height: 112px; }
       .dashboard-overview .stat-value { font-size: 25px; margin-top: 10px; }
       .dashboard-overview .stat-icon { width: 32px; height: 32px; }
+      .dashboard-notes-head { align-items: center; }
+      .dashboard-note-expand { min-height: 40px; }
+      .dashboard-notes.expanded { min-height: 78vh; }
+      .dashboard-notes.expanded .dashboard-note-textarea { min-height: 64vh; }
       .span-2 { grid-column: span 1; }
       .cost-row { grid-template-columns: 1fr; }
       .cost-remove { margin-top: 0; width: 100%; }
@@ -530,6 +554,7 @@
                   <h3 id="dashboardNotesHeading">Notes</h3>
                   <p>Keep a quick list of what you need to do across your projects.</p>
                 </div>
+                <button id="toggleDashboardNotesSize" class="btn btn-secondary dashboard-note-expand" type="button" aria-expanded="false">⛶ Expand</button>
               </div>
               <textarea id="dashboardNoteInput" class="input dashboard-note-textarea" maxlength="10000" placeholder="Type what you need to do..."></textarea>
               <div class="dashboard-note-hint">Press Enter to save • Shift + Enter for a new line</div>
@@ -2299,6 +2324,22 @@
         if (button.dataset.id !== activeIdeaId) leaveEditorIfAllowed(() => editIdea(button.dataset.id));
       }
       if (action === 'delete' && button.dataset.id) deleteIdea(button.dataset.id);
+    });
+
+    $('toggleDashboardNotesSize').addEventListener('click', () => {
+      const panel = document.querySelector('.dashboard-notes');
+      const button = $('toggleDashboardNotesSize');
+      if (!panel || !button) return;
+      const expanding = !panel.classList.contains('expanded');
+      panel.classList.toggle('expanded', expanding);
+      button.setAttribute('aria-expanded', String(expanding));
+      button.textContent = expanding ? '⛶ Collapse' : '⛶ Expand';
+      if (expanding) {
+        window.setTimeout(() => {
+          $('dashboardNoteInput').focus({ preventScroll: true });
+          panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      }
     });
 
     $('saveDashboardNoteButton').addEventListener('click', saveDashboardNote);
