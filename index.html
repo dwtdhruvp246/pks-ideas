@@ -341,7 +341,18 @@
     .my-notes-head p { margin:0; color:var(--muted); }
     .my-notes-layout { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; min-width:0; }
     .my-note-editor, .my-notes-library { background:white; border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 14px rgba(15,23,42,.035); }
-    .my-note-editor { padding:22px; position:relative; min-width:0; }
+    .my-note-editor { padding:22px; position:relative; min-width:0; transition:min-height .2s ease; }
+    .my-note-editor.expanded {
+      min-height:min(82vh, 900px);
+    }
+    .my-note-editor.expanded .my-note-content {
+      min-height:min(60vh, 680px);
+    }
+    .my-note-expand {
+      flex:0 0 auto;
+      padding:8px 11px;
+      font-size:12px;
+    }
     .my-note-editor h3, .my-notes-library h3 { margin:0; font-size:18px; }
     .my-note-editor-copy { color:var(--muted); font-size:12px; margin:5px 0 20px; line-height:1.5; }
     .my-note-content { min-height:250px; }
@@ -460,6 +471,15 @@
       .saved-note-content { max-width:100%; }
       .my-note-content { min-height:190px; }
       .my-note-links { min-height:70px; }
+      .my-note-editor.expanded {
+        min-height:84vh;
+      }
+      .my-note-editor.expanded .my-note-content {
+        min-height:64vh;
+      }
+      .my-note-expand {
+        min-height:40px;
+      }
       .my-note-category-row { grid-template-columns:1fr; }
       .my-note-new-category { align-items:stretch; flex-direction:column; }
       .my-note-new-category .btn { width:100%; }
@@ -595,7 +615,10 @@
                   <h3 id="myNoteEditorHeading">Add a note</h3>
                   <p class="my-note-editor-copy">The project name and links are optional. Notes are saved separately from your dashboard to-do notes.</p>
                 </div>
-                <button id="closeMyNoteEditorButton" class="icon-btn close-note-editor" type="button" aria-label="Close note editor" title="Close">×</button>
+                <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto;">
+                  <button id="toggleMyNoteEditorSize" class="btn btn-secondary my-note-expand" type="button" aria-expanded="false">⛶ Expand</button>
+                  <button id="closeMyNoteEditorButton" class="icon-btn close-note-editor" type="button" aria-label="Close note editor" title="Close">×</button>
+                </div>
               </div>
 
               <div class="field">
@@ -1436,6 +1459,11 @@
       $('myNoteId').value = '';
       $('myNoteEditorHeading').textContent = 'Add a note';
       $('saveMyNoteButton').textContent = 'Save note';
+      $('myNoteForm').classList.remove('expanded');
+      if ($('toggleMyNoteEditorSize')) {
+        $('toggleMyNoteEditorSize').setAttribute('aria-expanded', 'false');
+        $('toggleMyNoteEditorSize').textContent = '⛶ Expand';
+      }
       myNoteSavedSnapshot = getMyNoteSnapshot();
       updateMyNoteStatus('', '');
     }
@@ -2037,7 +2065,6 @@
       if (idea?.id) history.replaceState(null, '', `#idea=${encodeURIComponent(idea.id)}`);
       else history.replaceState(null, '', '#new');
       establishSavedSnapshot();
-      setTimeout(() => $('ideaTitle').focus(), 50);
     }
 
     function editIdea(id) {
@@ -2111,6 +2138,20 @@
     $('addMyNoteButton').addEventListener('click', () => {
       if (myNoteIsDirty() && !$('myNoteForm').classList.contains('hidden') && !window.confirm('Discard the unsaved changes in this note?')) return;
       openMyNoteEditor();
+    });
+    $('toggleMyNoteEditorSize').addEventListener('click', () => {
+      const editor = $('myNoteForm');
+      const button = $('toggleMyNoteEditorSize');
+      if (!editor || !button) return;
+      const expanding = !editor.classList.contains('expanded');
+      editor.classList.toggle('expanded', expanding);
+      button.setAttribute('aria-expanded', String(expanding));
+      button.textContent = expanding ? '⛶ Collapse' : '⛶ Expand';
+      if (expanding) {
+        window.setTimeout(() => {
+          editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      }
     });
     $('closeMyNoteEditorButton').addEventListener('click', () => closeMyNoteEditor());
     $('myNoteForm').addEventListener('input', refreshMyNoteDirtyState);
