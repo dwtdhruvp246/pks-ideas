@@ -305,6 +305,17 @@
     .editor-section-title { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
     .editor-section-title h3 { margin: 0; font-size: 18px; }
     .editor-section-title p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .private-notes-field { position: relative; }
+    .private-notes-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;
+    }
+    .private-notes-head label { margin-bottom: 0; }
+    .private-notes-expand {
+      flex: 0 0 auto; padding: 7px 10px; font-size: 12px;
+    }
+    .private-notes-field.expanded #ideaNotes {
+      min-height: min(62vh, 680px);
+    }
     .idea-section-nav {
       position: sticky; top: 88px; z-index: 8; margin: 0 0 18px; padding: 8px;
       display: flex; gap: 8px; overflow-x: auto; white-space: nowrap;
@@ -489,6 +500,12 @@
       .idea-section-nav { top: 84px; margin-left: -2px; margin-right: -2px; }
       .idea-section-nav button { padding: 8px 10px; font-size: 11px; }
       .idea-editor-card > .editor-section { scroll-margin-top: 146px; }
+      .private-notes-field.expanded #ideaNotes {
+        min-height: 64vh;
+      }
+      .private-notes-expand {
+        min-height: 40px;
+      }
     }
   </style>
 </head>
@@ -738,7 +755,13 @@
             <section id="ideaSectionPlanning" class="editor-section">
               <div class="editor-section-title"><h3>Planning & notes</h3><p>Track what matters and what should happen next.</p></div>
               <div class="form-grid">
-                <div class="field span-2"><label for="ideaNotes">Private notes</label><textarea id="ideaNotes" placeholder="Research, pricing, competitors, next actions..."></textarea></div>
+                <div id="privateNotesField" class="field span-2 private-notes-field">
+                  <div class="private-notes-head">
+                    <label for="ideaNotes">Private notes</label>
+                    <button id="togglePrivateNotesSize" class="btn btn-secondary private-notes-expand" type="button" aria-expanded="false">⛶ Expand</button>
+                  </div>
+                  <textarea id="ideaNotes" placeholder="Research, pricing, competitors, next actions..."></textarea>
+                </div>
                 <div class="field"><label for="ideaNextStep">Next step</label><input id="ideaNextStep" class="input" maxlength="250" placeholder="What should happen next?" /></div>
                 <div class="field"><label for="ideaDueDate">Target date</label><input id="ideaDueDate" class="input" type="date" /></div>
               </div>
@@ -2013,6 +2036,11 @@
       savedFormSnapshot = '';
       editorDraftRevision = 0;
       $('ideaForm').reset();
+      if ($('privateNotesField')) $('privateNotesField').classList.remove('expanded');
+      if ($('togglePrivateNotesSize')) {
+        $('togglePrivateNotesSize').setAttribute('aria-expanded', 'false');
+        $('togglePrivateNotesSize').textContent = '⛶ Expand';
+      }
       editingCosts = [];
       renderCostRows();
       editingTestAccounts = [];
@@ -2255,6 +2283,21 @@
       editingTestAccounts = collectTestAccountRows(true);
       renderTestAccountRows();
       markEditorInteraction();
+    });
+
+    $('togglePrivateNotesSize').addEventListener('click', () => {
+      const field = $('privateNotesField');
+      const button = $('togglePrivateNotesSize');
+      if (!field || !button) return;
+      const expanding = !field.classList.contains('expanded');
+      field.classList.toggle('expanded', expanding);
+      button.setAttribute('aria-expanded', String(expanding));
+      button.textContent = expanding ? '⛶ Collapse' : '⛶ Expand';
+      if (expanding) {
+        window.setTimeout(() => {
+          field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 80);
+      }
     });
 
     $('ideaForm').addEventListener('input', markEditorInteraction);
