@@ -344,6 +344,13 @@
     .unsaved-indicator { display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 12px; font-weight: 800; white-space: nowrap; }
     .unsaved-indicator::before { content: '•'; font-size: 18px; line-height: 0; }
 
+    .stale-data-banner {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      margin-bottom: 18px; padding: 14px 16px; border: 1px solid #f59e0b; border-radius: 14px;
+      background: #fffbeb; color: #92400e; font-size: 13px; line-height: 1.5;
+    }
+    .stale-data-banner strong { font-weight: 800; }
+
 
     /* My Notes workspace */
     .my-notes-page { max-width: 1180px; margin: 0 auto; }
@@ -449,6 +456,8 @@
       .idea-top-nav .quick-nav-label-long { display: none; }
       .unsaved-nav-actions { flex-direction: column-reverse; }
       .unsaved-nav-actions .btn { width: 100%; }
+      .stale-data-banner { flex-direction: column; align-items: stretch; }
+      .stale-data-banner .btn { width: 100%; }
       .toolbar, .form-grid { grid-template-columns: 1fr; }
       .dashboard-overview .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .dashboard-overview .stat-card { padding: 14px; min-height: 112px; }
@@ -697,6 +706,10 @@
         </section>
 
         <section id="ideaPage" class="idea-page hidden" aria-labelledby="ideaPageHeading">
+          <div id="staleIdeaBanner" class="stale-data-banner hidden" role="alert">
+            <div><strong>⚠️ Warning:</strong> This page is showing outdated data. Changes were made from another device.</div>
+            <button id="reloadLatestIdeaButton" class="btn btn-warning" type="button">Reload Latest Data</button>
+          </div>
           <div class="idea-page-head">
             <div>
               <button id="backToIdeas" class="back-link" type="button">← Back to all ideas</button>
@@ -800,6 +813,19 @@
     </div>
   </div>
 
+
+  <div id="staleSaveConflictDialog" class="unsaved-nav-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="staleSaveConflictTitle">
+    <div class="unsaved-nav-dialog">
+      <h3 id="staleSaveConflictTitle">Conflict Detected</h3>
+      <p>The server has newer data than what is on your screen. Save anyway (overwrite) or reload latest data?</p>
+      <div class="unsaved-nav-actions">
+        <button id="cancelStaleSaveButton" class="btn btn-secondary" type="button">Cancel</button>
+        <button id="reloadStaleIdeaButton" class="btn btn-secondary" type="button">Reload latest data</button>
+        <button id="overwriteStaleIdeaButton" class="btn btn-warning" type="button">Save anyway</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = 'https://mevffvqrpsiiesfsutng.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldmZmdnFycHNpaWVzZnN1dG5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMTE3MzUsImV4cCI6MjEwMTU4NzczNX0.pN9QyfnEkrNBmzC3imq_YwgqO3E1lbCF5SuZQbyDPs4';
@@ -834,6 +860,11 @@
     let isSavingIdea = false;
     let editorDraftRevision = 0;
     let pendingIdeaNavigation = null;
+    let loadedIdeaUpdatedAt = null;
+    let staleIdeaDetected = false;
+    let staleIdeaServerUpdatedAt = null;
+    let allowStaleOverwriteOnce = false;
+    let staleCheckRunning = false;
 
     const $ = (id) => document.getElementById(id);
     const loginView = $('loginView');
@@ -861,6 +892,99 @@
 
     const escapeAttr = escapeHtml;
 
+
+
+    function normalizeTimestamp(value) {
+      if (!value) return 0;
+      const timestamp = new Date(value).getTime();
+      return Number.isFinite(timestamp) ? timestamp : 0;
+    }
+
+    function setIdeaStaleState(isStale, serverUpdatedAt = null) {
+      staleIdeaDetected = Boolean(isStale);
+      staleIdeaServerUpdatedAt = serverUpdatedAt || null;
+      const banner = $('staleIdeaBanner');
+      if (banner) banner.classList.toggle('hidden', !staleIdeaDetected);
+    }
+
+    function establishLoadedIdeaVersion(idea) {
+      loadedIdeaUpdatedAt = idea?.updated_at || null;
+      setIdeaStaleState(false);
+    }
+
+    async function checkActiveIdeaFreshness(reason = 'background') {
+      if (!currentUser || !activeIdeaId || ideaPage.classList.contains('hidden') || staleCheckRunning || isSavingIdea) return staleIdeaDetected;
+      staleCheckRunning = true;
+      try {
+        const { data, error } = await db.from('ideas').select('id, updated_at').eq('id', activeIdeaId).maybeSingle();
+        if (error) throw error;
+        if (!data) {
+          setIdeaStaleState(true, null);
+          return true;
+        }
+        const localTime = normalizeTimestamp(loadedIdeaUpdatedAt);
+        const serverTime = normalizeTimestamp(data.updated_at);
+        if (serverTime > localTime) {
+          setIdeaStaleState(true, data.updated_at);
+          console.info(`Idea is stale (${reason}).`, { local: loadedIdeaUpdatedAt, server: data.updated_at });
+          return true;
+        }
+        return staleIdeaDetected;
+      } catch (error) {
+        console.warn('Could not check current idea freshness:', error);
+        return staleIdeaDetected;
+      } finally {
+        staleCheckRunning = false;
+      }
+    }
+
+    async function reloadActiveIdeaFromServer({ confirmUnsaved = true } = {}) {
+      if (!currentUser || !activeIdeaId) return false;
+      if (confirmUnsaved && hasUnsavedChanges) {
+        const confirmed = window.confirm('Reloading will discard your unsaved local changes and replace them with the latest server data. Continue?');
+        if (!confirmed) return false;
+      }
+      try {
+        setMessage($('formMessage'), 'Loading latest data...');
+        const { data: freshIdea, error } = await db.from('ideas').select('*').eq('id', activeIdeaId).maybeSingle();
+        if (error) throw error;
+        if (!freshIdea) throw new Error('This idea no longer exists on the server.');
+        const [freshCosts, freshTestAccounts] = await Promise.all([
+          loadIdeaCosts(activeIdeaId),
+          loadIdeaTestAccounts(activeIdeaId)
+        ]);
+        $('ideaTitle').value = freshIdea.title || '';
+        $('ideaCategory').value = freshIdea.category || '';
+        $('ideaStatus').value = freshIdea.status || 'Planning';
+        $('ideaPriority').value = freshIdea.priority || 'Medium';
+        $('ideaTargetUser').value = freshIdea.target_user || '';
+        $('ideaDescription').value = freshIdea.description || '';
+        $('ideaTechStack').value = freshIdea.tech_stack || '';
+        $('ideaSupabaseAccount').value = freshIdea.supabase_account || '';
+        $('ideaWebsiteUrl').value = freshIdea.website_url || '';
+        $('ideaGithubUrl').value = freshIdea.github_url || '';
+        $('ideaNotes').value = freshIdea.notes || '';
+        $('ideaNextStep').value = freshIdea.next_step || '';
+        $('ideaDueDate').value = freshIdea.due_date || '';
+        editingCosts = freshCosts;
+        renderCostRows();
+        editingTestAccounts = freshTestAccounts;
+        renderTestAccountRows();
+        const idx = ideas.findIndex((item) => item.id === freshIdea.id);
+        if (idx >= 0) ideas[idx] = freshIdea; else ideas.unshift(freshIdea);
+        $('ideaPageHeading').textContent = freshIdea.title;
+        $('pageTitle').textContent = freshIdea.title;
+        editorDraftRevision = 0;
+        establishLoadedIdeaVersion(freshIdea);
+        establishSavedSnapshot();
+        updateCategoryOptions(); renderSidebarIdeas(); renderIdeas();
+        setMessage($('formMessage'), 'Latest data loaded.', 'success');
+        return true;
+      } catch (error) {
+        setMessage($('formMessage'), error.message || 'Could not reload latest data.', 'error');
+        return false;
+      }
+    }
 
     function getIdeaFormSnapshot() {
       const formData = {
@@ -1663,12 +1787,8 @@
       if (!currentUser) return;
       ideaCostsRealtimeChannel = db.channel(`idea-costs-live-${currentUser.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'idea_costs' }, () => {
-          if (!activeIdeaId) return;
-          if (hasUnsavedChanges) {
-            setMessage($('formMessage'), 'Costs changed on another device. Save or discard your local changes before refreshing this project.', 'error');
-            return;
-          }
-          refreshActiveIdeaFromServer('realtime-cost');
+          if (!activeIdeaId || isSavingIdea) return;
+          checkActiveIdeaFreshness('realtime-cost');
         })
         .subscribe((status) => handleRealtimeStatus('Idea costs', status));
     }
@@ -1691,12 +1811,8 @@
       if (!currentUser) return;
       ideaTestAccountsRealtimeChannel = db.channel(`idea-test-accounts-live-${currentUser.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'idea_test_accounts' }, () => {
-          if (!activeIdeaId) return;
-          if (hasUnsavedChanges) {
-            setMessage($('formMessage'), 'Test accounts changed on another device. Save or discard your local changes before refreshing this project.', 'error');
-            return;
-          }
-          refreshActiveIdeaFromServer('realtime-test-accounts');
+          if (!activeIdeaId || isSavingIdea) return;
+          checkActiveIdeaFreshness('realtime-test-accounts');
         })
         .subscribe((status) => handleRealtimeStatus('Idea test accounts', status));
     }
@@ -1764,13 +1880,16 @@
 
     async function syncFromServer(reason = 'fallback') {
       if (!currentUser || liveSyncBusy || document.hidden || !navigator.onLine) return;
+      if (activeIdeaId && !ideaPage.classList.contains('hidden')) {
+        await checkActiveIdeaFreshness(reason);
+        return;
+      }
       liveSyncBusy = true;
       try {
         await loadIdeas();
         await loadDashboardNote();
         await loadPersonalNotes();
         await loadPersonalNoteCategories();
-        await refreshActiveIdeaFromServer(reason);
       } catch (error) {
         console.warn('Background sync failed:', error);
       } finally {
@@ -1975,11 +2094,15 @@
           renderSidebarIdeas();
           renderIdeas();
           if (activeIdeaId === changedId && eventType === 'DELETE') {
-            if (!hasUnsavedChanges) showDashboard();
-            else setMessage($('formMessage'), 'This project was deleted on another device. Your unsaved local changes are still on this screen.', 'error');
-          } else if (activeIdeaId === changedId) {
-            if (!hasUnsavedChanges) refreshActiveIdeaFromServer('realtime');
-            else setMessage($('formMessage'), 'This project changed on another device. Save or discard your local changes before syncing it.', 'error');
+            if (!isSavingIdea) {
+              setIdeaStaleState(true, null);
+              setMessage($('formMessage'), 'This project was deleted on another device. Reload or leave this page before saving.', 'error');
+            }
+          } else if (activeIdeaId === changedId && !isSavingIdea) {
+            const incomingTime = normalizeTimestamp(changed?.updated_at);
+            const localTime = normalizeTimestamp(loadedIdeaUpdatedAt);
+            if (incomingTime > localTime) setIdeaStaleState(true, changed.updated_at);
+            else checkActiveIdeaFreshness('realtime');
           }
         })
         .subscribe((status) => handleRealtimeStatus('Ideas', status));
@@ -1996,6 +2119,8 @@
       setUnsavedState(false);
       savedFormSnapshot = '';
       activeIdeaId = null;
+      loadedIdeaUpdatedAt = null;
+      setIdeaStaleState(false);
       dashboardView.classList.remove('hidden');
       ideaPage.classList.add('hidden');
       myNotesPage.classList.add('hidden');
@@ -2014,6 +2139,8 @@
     function showMyNotesPage() {
       setUnsavedState(false);
       activeIdeaId = null;
+      loadedIdeaUpdatedAt = null;
+      setIdeaStaleState(false);
       dashboardView.classList.add('hidden');
       ideaPage.classList.add('hidden');
       myNotesPage.classList.remove('hidden');
@@ -2046,6 +2173,8 @@
       editingTestAccounts = [];
       renderTestAccountRows();
       activeIdeaId = idea?.id || null;
+      if (idea) establishLoadedIdeaVersion(idea);
+      else { loadedIdeaUpdatedAt = null; setIdeaStaleState(false); }
       $('ideaId').value = idea?.id || '';
       $('ideaPageHeading').textContent = idea ? idea.title : 'New idea';
       $('ideaPageSubtext').textContent = idea ? 'Edit the project details, notes, links and costs.' : 'Add the details for this website idea.';
@@ -2303,8 +2432,34 @@
     $('ideaForm').addEventListener('input', markEditorInteraction);
     $('ideaForm').addEventListener('change', markEditorInteraction);
 
+    $('reloadLatestIdeaButton').addEventListener('click', () => reloadActiveIdeaFromServer({ confirmUnsaved: true }));
+    $('cancelStaleSaveButton').addEventListener('click', () => {
+      $('staleSaveConflictDialog').classList.add('hidden');
+      pendingIdeaNavigation = null;
+    });
+    $('reloadStaleIdeaButton').addEventListener('click', async () => {
+      $('staleSaveConflictDialog').classList.add('hidden');
+      pendingIdeaNavigation = null;
+      await reloadActiveIdeaFromServer({ confirmUnsaved: false });
+    });
+    $('overwriteStaleIdeaButton').addEventListener('click', () => {
+      $('staleSaveConflictDialog').classList.add('hidden');
+      allowStaleOverwriteOnce = true;
+      $('ideaForm').requestSubmit();
+    });
+
     $('ideaForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      const existingIdeaId = $('ideaId').value;
+      if (existingIdeaId && !allowStaleOverwriteOnce) {
+        const stale = await checkActiveIdeaFreshness('before-save');
+        if (stale) {
+          $('staleSaveConflictDialog').classList.remove('hidden');
+          requestAnimationFrame(() => $('reloadStaleIdeaButton').focus());
+          return;
+        }
+      }
+      allowStaleOverwriteOnce = false;
       const button = $('saveIdeaButton');
       const topButton = $('saveIdeaTopButton');
       button.disabled = true;
@@ -2348,6 +2503,10 @@
         const saved = result.data;
         await saveIdeaCosts(saved.id, costs);
         await saveIdeaTestAccounts(saved.id, testAccounts);
+        const { data: finalVersion, error: finalVersionError } = await db
+          .from('ideas').select('updated_at').eq('id', saved.id).single();
+        if (!finalVersionError && finalVersion?.updated_at) saved.updated_at = finalVersion.updated_at;
+        establishLoadedIdeaVersion(saved);
         const existingIndex = ideas.findIndex((idea) => idea.id === saved.id);
         if (existingIndex >= 0) ideas[existingIndex] = saved;
         else ideas.unshift(saved);
@@ -2461,6 +2620,11 @@
     });
     $('sidebarBackdrop').addEventListener('click', closeSidebar);
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !$('staleSaveConflictDialog').classList.contains('hidden')) {
+        $('staleSaveConflictDialog').classList.add('hidden');
+        pendingIdeaNavigation = null;
+        return;
+      }
       if (event.key === 'Escape' && !$('unsavedNavigationDialog').classList.contains('hidden')) {
         pendingIdeaNavigation = null;
         closeUnsavedNavigationDialog();
@@ -2481,13 +2645,23 @@
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && currentUser) { scheduleRealtimeReconnect(); syncFromServer('resume'); }
+      if (!document.hidden && currentUser) {
+        scheduleRealtimeReconnect();
+        if (activeIdeaId && !ideaPage.classList.contains('hidden')) checkActiveIdeaFreshness('visibilitychange');
+        else syncFromServer('resume');
+      }
     });
     window.addEventListener('focus', () => {
-      if (currentUser) { scheduleRealtimeReconnect(); syncFromServer('focus'); }
+      if (!currentUser) return;
+      scheduleRealtimeReconnect();
+      if (activeIdeaId && !ideaPage.classList.contains('hidden')) checkActiveIdeaFreshness('focus');
+      else syncFromServer('focus');
     });
     window.addEventListener('online', () => {
-      if (currentUser) { scheduleRealtimeReconnect(); syncFromServer('online'); }
+      if (!currentUser) return;
+      scheduleRealtimeReconnect();
+      if (activeIdeaId && !ideaPage.classList.contains('hidden')) checkActiveIdeaFreshness('online');
+      else syncFromServer('online');
     });
 
     let deferredInstallPrompt = null;

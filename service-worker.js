@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ideavault-v14';
+const CACHE_NAME = 'pks-ideas-v15';
 const APP_SHELL = [
   './',
   './index.html',
