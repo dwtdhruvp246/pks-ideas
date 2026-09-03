@@ -751,6 +751,7 @@
               <div class="form-grid">
                 <div class="field span-2"><label for="ideaTechStack">Tech stack</label><input id="ideaTechStack" class="input" maxlength="300" placeholder="Supabase, Cloudflare, n8n..." /></div>
                 <div class="field span-2"><label for="ideaSupabaseAccount">Supabase account</label><input id="ideaSupabaseAccount" class="input" maxlength="500" placeholder="Enter the Supabase account or project details..." /></div>
+                <div class="field span-2"><label for="ideaCloudflareAccount">Cloudflare account</label><input id="ideaCloudflareAccount" class="input" maxlength="500" placeholder="Enter the Cloudflare account or login details..." /></div>
                 <div class="field"><label for="ideaWebsiteUrl">Website / demo URL</label><input id="ideaWebsiteUrl" class="input" type="url" maxlength="500" placeholder="https://..." /></div>
                 <div class="field"><label for="ideaGithubUrl">GitHub URL</label><input id="ideaGithubUrl" class="input" type="url" maxlength="500" placeholder="https://github.com/..." /></div>
               </div>
@@ -961,6 +962,7 @@
         $('ideaDescription').value = freshIdea.description || '';
         $('ideaTechStack').value = freshIdea.tech_stack || '';
         $('ideaSupabaseAccount').value = freshIdea.supabase_account || '';
+        $('ideaCloudflareAccount').value = freshIdea.cloudflare_account || '';
         $('ideaWebsiteUrl').value = freshIdea.website_url || '';
         $('ideaGithubUrl').value = freshIdea.github_url || '';
         $('ideaNotes').value = freshIdea.notes || '';
@@ -996,6 +998,7 @@
         description: $('ideaDescription').value,
         tech_stack: $('ideaTechStack').value,
         supabase_account: $('ideaSupabaseAccount').value,
+        cloudflare_account: $('ideaCloudflareAccount').value,
         website_url: $('ideaWebsiteUrl').value,
         github_url: $('ideaGithubUrl').value,
         notes: $('ideaNotes').value,
@@ -1854,6 +1857,7 @@
         $('ideaDescription').value = freshIdea.description || '';
         $('ideaTechStack').value = freshIdea.tech_stack || '';
         $('ideaSupabaseAccount').value = freshIdea.supabase_account || '';
+        $('ideaCloudflareAccount').value = freshIdea.cloudflare_account || '';
         $('ideaWebsiteUrl').value = freshIdea.website_url || '';
         $('ideaGithubUrl').value = freshIdea.github_url || '';
         $('ideaNotes').value = freshIdea.notes || '';
@@ -1976,7 +1980,7 @@
       const status = $('statusFilter').value;
       const category = $('categoryFilter').value;
       const result = ideas.filter((idea) => {
-        const haystack = [idea.title, idea.description, idea.category, idea.status, idea.tech_stack, idea.supabase_account, idea.notes, idea.target_user, idea.next_step, idea.website_url, idea.github_url].join(' ').toLowerCase();
+        const haystack = [idea.title, idea.description, idea.category, idea.status, idea.tech_stack, idea.supabase_account, idea.cloudflare_account, idea.notes, idea.target_user, idea.next_step, idea.website_url, idea.github_url].join(' ').toLowerCase();
         return (!query || haystack.includes(query)) && (!status || idea.status === status) && (!category || idea.category === category);
       });
       result.sort((a, b) => compareValues(a, b, sortState.key) * (sortState.direction === 'asc' ? 1 : -1));
@@ -2193,6 +2197,7 @@
         $('ideaDescription').value = idea.description || '';
         $('ideaTechStack').value = idea.tech_stack || '';
         $('ideaSupabaseAccount').value = idea.supabase_account || '';
+        $('ideaCloudflareAccount').value = idea.cloudflare_account || '';
         $('ideaWebsiteUrl').value = idea.website_url || '';
         $('ideaGithubUrl').value = idea.github_url || '';
         $('ideaNotes').value = idea.notes || '';
@@ -2477,6 +2482,7 @@
         description: $('ideaDescription').value.trim() || null,
         tech_stack: $('ideaTechStack').value.trim() || null,
         supabase_account: $('ideaSupabaseAccount').value.trim() || null,
+        cloudflare_account: $('ideaCloudflareAccount').value.trim() || null,
         website_url: $('ideaWebsiteUrl').value.trim() || null,
         github_url: $('ideaGithubUrl').value.trim() || null,
         notes: $('ideaNotes').value.trim() || null,
