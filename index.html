@@ -1320,12 +1320,23 @@
     }
 
 
-    function updateChecklistLinkedNoteOptions(selectedId = '') {
+    function updateChecklistLinkedNoteOptions(selectedId) {
       const select = $('checklistLinkedNote');
       if (!select) return;
+
+      // Preserve the user's current selection whenever background sync/realtime
+      // refreshes the My Notes list. An explicit selectedId (including an empty
+      // string) is only used when the editor intentionally resets or loads an item.
+      const valueToKeep = selectedId === undefined ? select.value : selectedId;
       const notes = [...personalNotes].sort((a,b) => String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity:'base' }));
+
       select.innerHTML = '<option value="">No connected note</option>' + notes.map(note => `<option value="${escapeAttr(note.id)}">${escapeHtml(note.title || 'Untitled note')}</option>`).join('');
-      if (selectedId && notes.some(note => note.id === selectedId)) select.value = selectedId;
+
+      if (valueToKeep && notes.some(note => note.id === valueToKeep)) {
+        select.value = valueToKeep;
+      } else {
+        select.value = '';
+      }
     }
 
     async function loadChecklistItems() {
@@ -1440,7 +1451,7 @@
       $('checklistItemId').value = '';
       $('checklistEditorHeading').textContent = 'Add checklist item';
       $('saveChecklistItemButton').textContent = 'Save checklist item';
-      updateChecklistLinkedNoteOptions();
+      updateChecklistLinkedNoteOptions('');
     }
 
     function openChecklistEditor(item = null) {
