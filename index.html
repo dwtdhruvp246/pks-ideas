@@ -415,6 +415,48 @@
     .my-notes-filter-panel .field { margin:0; flex:1; }
     .saved-note-category { display:inline-flex; margin-top:8px; margin-right:6px; padding:5px 8px; border-radius:999px; background:#f3e8ff; color:#7e22ce; font-size:10px; font-weight:800; }
 
+
+
+    /* Checklist workspace + per-idea checklist */
+    .checklist-page { max-width:1180px; margin:0 auto; }
+    .checklist-head { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:22px; flex-wrap:wrap; }
+    .checklist-head h2 { margin:0 0 6px; font-size:32px; letter-spacing:-1px; }
+    .checklist-head p { margin:0; color:var(--muted); }
+    .checklist-editor, .checklist-library { background:white; border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 14px rgba(15,23,42,.035); }
+    .checklist-editor { padding:22px; margin-bottom:20px; }
+    .checklist-editor-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:18px; }
+    .checklist-editor-head h3, .checklist-library h3 { margin:0; font-size:18px; }
+    .checklist-editor-head p { margin:5px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
+    .checklist-editor textarea { min-height:180px; }
+    .checklist-editor-actions { display:flex; justify-content:flex-end; gap:10px; }
+    .checklist-library-head { padding:20px; border-bottom:1px solid var(--border); }
+    .checklist-library-list { display:grid; }
+    .checklist-library-item { padding:18px 20px; border-bottom:1px solid var(--border); }
+    .checklist-library-item:last-child { border-bottom:0; }
+    .checklist-library-item-top { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
+    .checklist-library-item h4 { margin:0; font-size:16px; }
+    .checklist-library-item p { margin:8px 0 0; color:#4b5563; font-size:13px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .checklist-linked-note { display:inline-flex; margin-top:10px; color:var(--primary); font-size:12px; font-weight:800; border:0; background:transparent; padding:0; }
+    .checklist-linked-note:hover { text-decoration:underline; }
+    .checklist-empty { padding:48px 22px; text-align:center; color:var(--muted); }
+    .checklist-empty strong { display:block; color:var(--text); margin-bottom:6px; }
+
+    .idea-checklist-section { background:white; }
+    .idea-checklist-summary { color:var(--muted); font-size:12px; margin-top:4px; }
+    .idea-checklist-list { display:grid; gap:10px; }
+    .idea-checklist-item { border:1px solid var(--border); border-radius:13px; background:#fff; overflow:hidden; }
+    .idea-checklist-item.not-needed { background:#f9fafb; opacity:.82; }
+    .idea-checklist-item.implemented { border-color:#bbf7d0; }
+    .idea-checklist-row { display:grid; grid-template-columns:auto auto minmax(0,1fr); gap:10px; align-items:center; padding:12px; }
+    .check-state-control { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; color:#4b5563; white-space:nowrap; }
+    .check-state-control input { width:18px; height:18px; accent-color:var(--primary); }
+    .checklist-title-toggle { width:100%; border:0; background:transparent; text-align:left; padding:5px 4px; font-weight:800; color:var(--text); display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .checklist-title-toggle:hover { color:var(--primary); }
+    .checklist-chevron { color:var(--muted); font-size:12px; flex:0 0 auto; }
+    .idea-checklist-details { padding:0 14px 14px 86px; color:#4b5563; font-size:13px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .idea-checklist-details .checklist-linked-note { display:inline-flex; margin-top:12px; }
+    .idea-checklist-status-note { color:var(--muted); font-size:12px; padding:4px 0 0; }
+
     @media (max-width: 900px) {
       .my-notes-page { max-width:100%; }
       .my-notes-layout { grid-template-columns:minmax(0,1fr); gap:16px; }
@@ -515,6 +557,15 @@
       .private-notes-expand {
         min-height: 40px;
       }
+      .checklist-head { align-items:stretch; flex-direction:column; }
+      .checklist-head .btn { width:100%; }
+      .checklist-editor { padding:15px; }
+      .checklist-editor-actions { flex-direction:column; }
+      .checklist-editor-actions .btn { width:100%; }
+      .idea-checklist-row { grid-template-columns:1fr 1fr; align-items:center; }
+      .checklist-title-toggle { grid-column:1 / -1; padding-top:8px; }
+      .idea-checklist-details { padding:0 12px 14px; }
+
     }
   </style>
 </head>
@@ -557,6 +608,7 @@
       <div class="nav-label">WORKSPACE</div>
       <button id="allIdeasNav" class="nav-item active" type="button">◫ All ideas</button>
       <button id="myNotesNav" class="nav-item" type="button">▤ My Notes</button>
+      <button id="checklistNav" class="nav-item" type="button">☑ Checklist</button>
       <div class="nav-label ideas-nav-label">YOUR IDEAS</div>
       <div id="sidebarIdeas" class="sidebar-ideas" aria-label="Idea pages"></div>
       <div class="sidebar-bottom">
@@ -705,6 +757,49 @@
           </div>
         </section>
 
+
+        <section id="checklistPage" class="checklist-page hidden" aria-labelledby="checklistHeading">
+          <div class="checklist-head">
+            <div>
+              <h2 id="checklistHeading">Checklist</h2>
+              <p>Create reusable checklist items that will appear on every idea.</p>
+            </div>
+            <button id="addChecklistItemButton" class="btn btn-primary" type="button">＋ Add checklist item</button>
+          </div>
+
+          <form id="checklistForm" class="checklist-editor hidden">
+            <input id="checklistItemId" type="hidden" />
+            <div class="checklist-editor-head">
+              <div>
+                <h3 id="checklistEditorHeading">Add checklist item</h3>
+                <p>Add the title, instructions/details, and optionally connect it to one of your saved notes.</p>
+              </div>
+              <button id="closeChecklistEditorButton" class="icon-btn" type="button" aria-label="Close checklist editor">×</button>
+            </div>
+            <div class="field">
+              <label for="checklistTitle">Title *</label>
+              <input id="checklistTitle" class="input" maxlength="180" required placeholder="e.g. Add privacy policy" />
+            </div>
+            <div class="field">
+              <label for="checklistLinkedNote">Connected note <span style="font-weight:500;color:var(--muted);">(optional)</span></label>
+              <select id="checklistLinkedNote"><option value="">No connected note</option></select>
+            </div>
+            <div class="field">
+              <label for="checklistDetails">Checklist details *</label>
+              <textarea id="checklistDetails" required placeholder="Explain what needs to be checked or implemented..."></textarea>
+            </div>
+            <div class="checklist-editor-actions">
+              <button id="cancelChecklistEditButton" class="btn btn-secondary" type="button">Cancel</button>
+              <button id="saveChecklistItemButton" class="btn btn-primary" type="submit">Save checklist item</button>
+            </div>
+          </form>
+
+          <section class="checklist-library" aria-label="Saved checklist items">
+            <div class="checklist-library-head"><h3>Saved checklist items</h3></div>
+            <div id="checklistLibraryList" class="checklist-library-list"></div>
+          </section>
+        </section>
+
         <section id="ideaPage" class="idea-page hidden" aria-labelledby="ideaPageHeading">
           <div id="staleIdeaBanner" class="stale-data-banner hidden" role="alert">
             <div><strong>⚠️ Warning:</strong> This page is showing outdated data. Changes were made from another device.</div>
@@ -728,6 +823,7 @@
             <button type="button" data-section-target="ideaSectionInfrastructure">Infrastructure &amp; links</button>
             <button type="button" data-section-target="ideaSectionTestAccounts">Test accounts</button>
             <button type="button" data-section-target="ideaSectionPlanning">Planning &amp; notes</button>
+            <button type="button" data-section-target="ideaSectionChecklist">Checklist</button>
             <button type="button" data-section-target="ideaSectionCosting">Costing</button>
           </nav>
 
@@ -779,6 +875,16 @@
                 <div class="field"><label for="ideaNextStep">Next step</label><input id="ideaNextStep" class="input" maxlength="250" placeholder="What should happen next?" /></div>
                 <div class="field"><label for="ideaDueDate">Target date</label><input id="ideaDueDate" class="input" type="date" /></div>
               </div>
+            </section>
+
+
+            <section id="ideaSectionChecklist" class="editor-section idea-checklist-section">
+              <div class="editor-section-title">
+                <h3>Checklist</h3>
+                <p>Track reusable requirements for this idea. Mark an item implemented or not needed.</p>
+              </div>
+              <div id="ideaChecklistSummary" class="idea-checklist-summary"></div>
+              <div id="ideaChecklistList" class="idea-checklist-list"></div>
             </section>
 
             <section id="ideaSectionCosting" class="editor-section costing-section">
@@ -866,6 +972,11 @@
     let staleIdeaServerUpdatedAt = null;
     let allowStaleOverwriteOnce = false;
     let staleCheckRunning = false;
+    let checklistItems = [];
+    let ideaChecklistStatuses = [];
+    let checklistItemsRealtimeChannel = null;
+    let ideaChecklistStatusesRealtimeChannel = null;
+    let editingChecklistItemId = null;
 
     const $ = (id) => document.getElementById(id);
     const loginView = $('loginView');
@@ -874,6 +985,7 @@
     const dashboardView = $('dashboardView');
     const ideaPage = $('ideaPage');
     const myNotesPage = $('myNotesPage');
+    const checklistPage = $('checklistPage');
     let activeIdeaId = null;
 
     function setMessage(element, text = '', type = '') {
@@ -1207,9 +1319,211 @@
       if (insertError) throw insertError;
     }
 
+
+    function updateChecklistLinkedNoteOptions(selectedId = '') {
+      const select = $('checklistLinkedNote');
+      if (!select) return;
+      const notes = [...personalNotes].sort((a,b) => String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity:'base' }));
+      select.innerHTML = '<option value="">No connected note</option>' + notes.map(note => `<option value="${escapeAttr(note.id)}">${escapeHtml(note.title || 'Untitled note')}</option>`).join('');
+      if (selectedId && notes.some(note => note.id === selectedId)) select.value = selectedId;
+    }
+
+    async function loadChecklistItems() {
+      if (!currentUser) return;
+      const { data, error } = await db.from('checklist_items').select('*').order('created_at', { ascending:true });
+      if (error) { console.error('Could not load checklist items:', error); return; }
+      checklistItems = data || [];
+      renderChecklistLibrary();
+      renderIdeaChecklist();
+    }
+
+    async function loadIdeaChecklistStatuses(ideaId) {
+      ideaChecklistStatuses = [];
+      if (!ideaId) { renderIdeaChecklist(); return; }
+      const { data, error } = await db.from('idea_checklist_status').select('*').eq('idea_id', ideaId);
+      if (error) { console.error('Could not load idea checklist status:', error); renderIdeaChecklist(); return; }
+      ideaChecklistStatuses = data || [];
+      renderIdeaChecklist();
+    }
+
+    function getChecklistStatus(itemId) {
+      return ideaChecklistStatuses.find(row => row.checklist_item_id === itemId) || { implemented:false, not_needed:false };
+    }
+
+    function renderChecklistLibrary() {
+      const container = $('checklistLibraryList');
+      if (!container) return;
+      if (!checklistItems.length) {
+        container.innerHTML = '<div class="checklist-empty"><strong>No checklist items yet</strong>Add your first reusable requirement.</div>';
+        return;
+      }
+      container.innerHTML = checklistItems.map(item => {
+        const note = personalNotes.find(n => n.id === item.note_id);
+        return `<article class="checklist-library-item" data-checklist-library-id="${escapeAttr(item.id)}">
+          <div class="checklist-library-item-top">
+            <div>
+              <h4>${escapeHtml(item.title)}</h4>
+              <p>${escapeHtml(item.details || '')}</p>
+              ${note ? `<button class="checklist-linked-note" type="button" data-open-note="${escapeAttr(note.id)}">▤ ${escapeHtml(note.title)}</button>` : ''}
+            </div>
+            <div class="saved-note-actions">
+              <button class="icon-btn" type="button" data-checklist-action="edit" data-id="${escapeAttr(item.id)}" title="Edit checklist item">✎</button>
+              <button class="icon-btn" type="button" data-checklist-action="delete" data-id="${escapeAttr(item.id)}" title="Delete checklist item">⌫</button>
+            </div>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    function renderIdeaChecklist() {
+      const container = $('ideaChecklistList');
+      const summary = $('ideaChecklistSummary');
+      if (!container || !summary) return;
+      if (!activeIdeaId) {
+        summary.textContent = '';
+        container.innerHTML = '<div class="checklist-empty"><strong>Save this idea first</strong>The reusable checklist will become available after the idea has been created.</div>';
+        return;
+      }
+      if (!checklistItems.length) {
+        summary.textContent = '';
+        container.innerHTML = '<div class="checklist-empty"><strong>No checklist items yet</strong>Create items from the Checklist page in the sidebar.</div>';
+        return;
+      }
+      const sorted = [...checklistItems].sort((a,b) => {
+        const sa = getChecklistStatus(a.id), sb = getChecklistStatus(b.id);
+        const ra = sa.not_needed ? 2 : (sa.implemented ? 1 : 0);
+        const rb = sb.not_needed ? 2 : (sb.implemented ? 1 : 0);
+        if (ra !== rb) return ra-rb;
+        return String(a.title).localeCompare(String(b.title), undefined, { sensitivity:'base' });
+      });
+      const implementedCount = checklistItems.filter(item => getChecklistStatus(item.id).implemented).length;
+      const notNeededCount = checklistItems.filter(item => getChecklistStatus(item.id).not_needed).length;
+      summary.textContent = `${implementedCount} implemented • ${notNeededCount} not needed • ${checklistItems.length - implementedCount - notNeededCount} remaining`;
+      container.innerHTML = sorted.map(item => {
+        const status = getChecklistStatus(item.id);
+        const note = personalNotes.find(n => n.id === item.note_id);
+        const cls = status.not_needed ? 'not-needed' : (status.implemented ? 'implemented' : '');
+        return `<article class="idea-checklist-item ${cls}" data-idea-checklist-item="${escapeAttr(item.id)}">
+          <div class="idea-checklist-row">
+            <label class="check-state-control"><input type="checkbox" data-checklist-state="implemented" data-id="${escapeAttr(item.id)}" ${status.implemented ? 'checked' : ''}> ✓ Implemented</label>
+            <label class="check-state-control"><input type="checkbox" data-checklist-state="not_needed" data-id="${escapeAttr(item.id)}" ${status.not_needed ? 'checked' : ''}> ✕ Not needed</label>
+            <button class="checklist-title-toggle" type="button" data-checklist-expand="${escapeAttr(item.id)}"><span>${escapeHtml(item.title)}</span><span class="checklist-chevron">▾</span></button>
+          </div>
+          <div class="idea-checklist-details hidden" data-checklist-details="${escapeAttr(item.id)}">${escapeHtml(item.details || '')}${note ? `<br><button class="checklist-linked-note" type="button" data-open-note="${escapeAttr(note.id)}">▤ Open connected note: ${escapeHtml(note.title)}</button>` : ''}</div>
+        </article>`;
+      }).join('');
+    }
+
+    async function saveIdeaChecklistState(itemId, changedField, checked) {
+      if (!currentUser || !activeIdeaId) return;
+      const current = getChecklistStatus(itemId);
+      let implemented = Boolean(current.implemented);
+      let not_needed = Boolean(current.not_needed);
+      if (changedField === 'implemented') {
+        implemented = checked;
+        if (checked) not_needed = false;
+      } else {
+        not_needed = checked;
+        if (checked) implemented = false;
+      }
+      const payload = { user_id:currentUser.id, idea_id:activeIdeaId, checklist_item_id:itemId, implemented, not_needed };
+      const { data, error } = await db.from('idea_checklist_status').upsert(payload, { onConflict:'idea_id,checklist_item_id' }).select().single();
+      if (error) { alert(error.message || 'Could not update checklist status.'); await loadIdeaChecklistStatuses(activeIdeaId); return; }
+      const idx = ideaChecklistStatuses.findIndex(row => row.checklist_item_id === itemId);
+      if (idx >= 0) ideaChecklistStatuses[idx] = data; else ideaChecklistStatuses.push(data);
+      renderIdeaChecklist();
+    }
+
+    function resetChecklistEditor() {
+      editingChecklistItemId = null;
+      $('checklistForm').reset();
+      $('checklistItemId').value = '';
+      $('checklistEditorHeading').textContent = 'Add checklist item';
+      $('saveChecklistItemButton').textContent = 'Save checklist item';
+      updateChecklistLinkedNoteOptions();
+    }
+
+    function openChecklistEditor(item = null) {
+      resetChecklistEditor();
+      if (item) {
+        editingChecklistItemId = item.id;
+        $('checklistItemId').value = item.id;
+        $('checklistTitle').value = item.title || '';
+        $('checklistDetails').value = item.details || '';
+        updateChecklistLinkedNoteOptions(item.note_id || '');
+        $('checklistEditorHeading').textContent = 'Edit checklist item';
+        $('saveChecklistItemButton').textContent = 'Save changes';
+      }
+      $('checklistForm').classList.remove('hidden');
+      $('addChecklistItemButton').classList.add('hidden');
+    }
+
+    function closeChecklistEditor() {
+      resetChecklistEditor();
+      $('checklistForm').classList.add('hidden');
+      $('addChecklistItemButton').classList.remove('hidden');
+    }
+
+    async function saveChecklistItem(event) {
+      event.preventDefault();
+      const title = $('checklistTitle').value.trim();
+      const details = $('checklistDetails').value.trim();
+      if (!title) { $('checklistTitle').focus(); return; }
+      if (!details) { $('checklistDetails').focus(); return; }
+      const payload = { user_id:currentUser.id, title, details, note_id:$('checklistLinkedNote').value || null };
+      const result = editingChecklistItemId
+        ? await db.from('checklist_items').update(payload).eq('id', editingChecklistItemId).select().single()
+        : await db.from('checklist_items').insert(payload).select().single();
+      if (result.error) { alert(result.error.message); return; }
+      const idx = checklistItems.findIndex(item => item.id === result.data.id);
+      if (idx >= 0) checklistItems[idx] = result.data; else checklistItems.push(result.data);
+      renderChecklistLibrary(); renderIdeaChecklist(); closeChecklistEditor();
+    }
+
+    async function deleteChecklistItem(id) {
+      const item = checklistItems.find(row => row.id === id);
+      if (!item || !window.confirm(`Delete “${item.title}”? It will be removed from every idea.`)) return;
+      const { error } = await db.from('checklist_items').delete().eq('id', id);
+      if (error) { alert(error.message); return; }
+      checklistItems = checklistItems.filter(row => row.id !== id);
+      ideaChecklistStatuses = ideaChecklistStatuses.filter(row => row.checklist_item_id !== id);
+      renderChecklistLibrary(); renderIdeaChecklist();
+    }
+
+    function openPersonalNoteFromChecklist(noteId) {
+      showMyNotesPage(noteId);
+    }
+
+    function unsubscribeFromChecklistChanges() {
+      for (const channelName of ['checklistItemsRealtimeChannel','ideaChecklistStatusesRealtimeChannel']) {
+        const channel = channelName === 'checklistItemsRealtimeChannel' ? checklistItemsRealtimeChannel : ideaChecklistStatusesRealtimeChannel;
+        if (!channel) continue;
+        try { if (typeof channel.unsubscribe === 'function') channel.unsubscribe(); else db.removeChannel(channel); } catch (e) { console.warn('Checklist realtime cleanup failed', e); }
+        if (channelName === 'checklistItemsRealtimeChannel') checklistItemsRealtimeChannel = null; else ideaChecklistStatusesRealtimeChannel = null;
+      }
+    }
+
+    function subscribeToChecklistChanges() {
+      unsubscribeFromChecklistChanges();
+      if (!currentUser) return;
+      checklistItemsRealtimeChannel = db.channel(`checklist-items-live-${currentUser.id}`)
+        .on('postgres_changes', { event:'*', schema:'public', table:'checklist_items' }, () => loadChecklistItems())
+        .subscribe(status => handleRealtimeStatus('Checklist items', status));
+      ideaChecklistStatusesRealtimeChannel = db.channel(`idea-checklist-status-live-${currentUser.id}`)
+        .on('postgres_changes', { event:'*', schema:'public', table:'idea_checklist_status' }, (payload) => {
+          const row = payload?.new || payload?.old;
+          if (!row || row.idea_id !== activeIdeaId) return;
+          loadIdeaChecklistStatuses(activeIdeaId);
+        })
+        .subscribe(status => handleRealtimeStatus('Idea checklist status', status));
+    }
+
     function getRequestedRoute() {
       const hash = location.hash || '';
       if (hash === '#notes') return { type: 'notes' };
+      const noteMatch = hash.match(/^#notes=(.+)$/);
+      if (noteMatch) { try { return { type:'notes', id:decodeURIComponent(noteMatch[1]) }; } catch {} }
+      if (hash === '#checklist') return { type:'checklist' };
       if (hash === '#new') return { type: 'new' };
       const ideaMatch = hash.match(/^#idea=(.+)$/);
       if (ideaMatch) {
@@ -1221,7 +1535,11 @@
 
     async function applyRequestedRoute(route) {
       if (route.type === 'notes') {
-        showMyNotesPage();
+        showMyNotesPage(route.id || null);
+        return;
+      }
+      if (route.type === 'checklist') {
+        showChecklistPage();
         return;
       }
       if (route.type === 'new') {
@@ -1256,7 +1574,7 @@
       appView.classList.add('hidden');
 
       await loadIdeas();
-      await Promise.all([loadDashboardNote(), loadPersonalNotes(), loadPersonalNoteCategories()]);
+      await Promise.all([loadDashboardNote(), loadPersonalNotes(), loadPersonalNoteCategories(), loadChecklistItems()]);
       await applyRequestedRoute(requestedRoute);
 
       // Reveal only after the correct route has been fully selected/loaded.
@@ -1268,6 +1586,7 @@
       subscribeToPersonalNoteCategoriesChanges();
       subscribeToIdeaCostChanges();
       subscribeToIdeaTestAccountChanges();
+      subscribeToChecklistChanges();
       startLiveSyncFallback();
     }
 
@@ -1278,6 +1597,7 @@
       unsubscribeFromPersonalNoteCategoriesChanges();
       unsubscribeFromIdeaCostChanges();
       unsubscribeFromIdeaTestAccountChanges();
+      unsubscribeFromChecklistChanges();
       stopLiveSyncFallback();
       currentUser = null;
       ideas = [];
@@ -1293,12 +1613,14 @@
       updateDashboardNoteStatus('');
       personalNotes = [];
       personalNoteCategories = [];
+      checklistItems = [];
+      ideaChecklistStatuses = [];
       editingMyNoteId = null;
       myNoteSavedSnapshot = '';
       if ($('myNoteForm')) $('myNoteForm').reset();
       if ($('myNotesList')) $('myNotesList').innerHTML = '';
       updateMyNoteStatus('');
-      if (dashboardView && ideaPage && myNotesPage) { dashboardView.classList.remove('hidden'); ideaPage.classList.add('hidden'); myNotesPage.classList.add('hidden'); }
+      if (dashboardView && ideaPage && myNotesPage && checklistPage) { dashboardView.classList.remove('hidden'); ideaPage.classList.add('hidden'); myNotesPage.classList.add('hidden'); checklistPage.classList.add('hidden'); }
       renderIdeas();
     }
 
@@ -1548,6 +1870,7 @@
       }
       personalNotes = data || [];
       updatePersonalNoteCategoryOptions();
+      updateChecklistLinkedNoteOptions();
       renderPersonalNotes();
     }
 
@@ -1705,6 +2028,9 @@
       myNoteSavedSnapshot = getMyNoteSnapshot();
       updateMyNoteStatus('saved', 'Saved');
       renderPersonalNotes();
+      updateChecklistLinkedNoteOptions();
+      renderChecklistLibrary();
+      renderIdeaChecklist();
       window.setTimeout(() => {
         closeMyNoteEditor(true);
       }, 350);
@@ -1748,7 +2074,10 @@
             }
           }
           updatePersonalNoteCategoryOptions();
+          updateChecklistLinkedNoteOptions();
           renderPersonalNotes();
+          renderChecklistLibrary();
+          renderIdeaChecklist();
         })
         .subscribe((status) => handleRealtimeStatus('My Notes', status));
     }
@@ -1768,6 +2097,7 @@
       personalNoteCategoriesRealtimeChannel = db.channel(`personal-note-categories-live-${currentUser.id}`)
         .on('postgres_changes', { event:'*', schema:'public', table:'personal_note_categories' }, async () => {
           await loadPersonalNoteCategories();
+        await loadChecklistItems();
           renderPersonalNotes();
         })
         .subscribe((status) => handleRealtimeStatus('Note categories', status));
@@ -1928,6 +2258,7 @@
       subscribeToPersonalNoteCategoriesChanges();
       subscribeToIdeaCostChanges();
       subscribeToIdeaTestAccountChanges();
+      subscribeToChecklistChanges();
     }
 
     function scheduleRealtimeReconnect() {
@@ -2128,9 +2459,11 @@
       dashboardView.classList.remove('hidden');
       ideaPage.classList.add('hidden');
       myNotesPage.classList.add('hidden');
+      checklistPage.classList.add('hidden');
       $('pageTitle').textContent = 'Website Ideas';
       $('allIdeasNav').classList.add('active');
       $('myNotesNav').classList.remove('active');
+      $('checklistNav').classList.remove('active');
       $('topAddButton').classList.remove('hidden');
       $('ideaTopNav').classList.add('hidden');
       renderSidebarIdeas();
@@ -2140,26 +2473,56 @@
     }
 
 
-    function showMyNotesPage() {
+    function showMyNotesPage(focusNoteId = null) {
       setUnsavedState(false);
       activeIdeaId = null;
       loadedIdeaUpdatedAt = null;
       setIdeaStaleState(false);
       dashboardView.classList.add('hidden');
       ideaPage.classList.add('hidden');
+      checklistPage.classList.add('hidden');
       myNotesPage.classList.remove('hidden');
       $('pageTitle').textContent = 'My Notes';
       $('allIdeasNav').classList.remove('active');
       $('myNotesNav').classList.add('active');
+      $('checklistNav').classList.remove('active');
       $('topAddButton').classList.add('hidden');
       $('ideaTopNav').classList.add('hidden');
       renderSidebarIdeas();
       renderPersonalNotes();
       closeSidebar();
-      history.replaceState(null, '', '#notes');
+      history.replaceState(null, '', focusNoteId ? `#notes=${encodeURIComponent(focusNoteId)}` : '#notes');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (focusNoteId) window.setTimeout(() => {
+        const target = document.querySelector(`[data-note-id="${CSS.escape(focusNoteId)}"]`);
+        if (target) { target.scrollIntoView({ behavior:'smooth', block:'center' }); target.style.outline = '2px solid var(--primary)'; window.setTimeout(() => target.style.outline = '', 2200); }
+      }, 120);
       if (!myNoteSavedSnapshot) resetMyNoteEditor();
       if (!editingMyNoteId && !myNoteIsDirty()) { $('myNoteForm').classList.add('hidden'); $('addMyNoteButton').classList.remove('hidden'); }
+    }
+
+
+    function showChecklistPage() {
+      setUnsavedState(false);
+      activeIdeaId = null;
+      loadedIdeaUpdatedAt = null;
+      setIdeaStaleState(false);
+      dashboardView.classList.add('hidden');
+      ideaPage.classList.add('hidden');
+      myNotesPage.classList.add('hidden');
+      checklistPage.classList.remove('hidden');
+      $('pageTitle').textContent = 'Checklist';
+      $('allIdeasNav').classList.remove('active');
+      $('myNotesNav').classList.remove('active');
+      $('checklistNav').classList.add('active');
+      $('topAddButton').classList.add('hidden');
+      $('ideaTopNav').classList.add('hidden');
+      updateChecklistLinkedNoteOptions();
+      renderChecklistLibrary();
+      renderSidebarIdeas();
+      closeSidebar();
+      history.replaceState(null, '', '#checklist');
+      window.scrollTo({ top:0, behavior:'smooth' });
     }
 
     async function openIdeaPage(idea = null) {
@@ -2187,6 +2550,7 @@
       $('saveIdeaTopButton').textContent = idea ? 'Save changes' : 'Create idea';
       $('deleteIdeaPageButton').classList.toggle('hidden', !idea);
       setMessage($('formMessage'));
+      if (!idea) { ideaChecklistStatuses = []; renderIdeaChecklist(); }
 
       if (idea) {
         $('ideaTitle').value = idea.title || '';
@@ -2208,6 +2572,7 @@
           renderCostRows();
           editingTestAccounts = await loadIdeaTestAccounts(idea.id);
           renderTestAccountRows();
+          await loadIdeaChecklistStatuses(idea.id);
         } catch (error) {
           setMessage($('formMessage'), `Idea loaded, but project extras could not be loaded: ${error.message}`, 'error');
         }
@@ -2215,9 +2580,11 @@
 
       dashboardView.classList.add('hidden');
       myNotesPage.classList.add('hidden');
+      checklistPage.classList.add('hidden');
       ideaPage.classList.remove('hidden');
       $('allIdeasNav').classList.remove('active');
       $('myNotesNav').classList.remove('active');
+      $('checklistNav').classList.remove('active');
       $('topAddButton').classList.remove('hidden');
       $('ideaTopNav').classList.remove('hidden');
       renderSidebarIdeas();
@@ -2261,7 +2628,7 @@
       if (visible.length) setActiveIdeaSection(visible[0].target.id);
     }, { root: null, rootMargin: '-150px 0px -55% 0px', threshold: [0, 0.01, 0.1] });
 
-    ['ideaSectionOverview','ideaSectionInfrastructure','ideaSectionTestAccounts','ideaSectionPlanning','ideaSectionCosting'].forEach((id) => {
+    ['ideaSectionOverview','ideaSectionInfrastructure','ideaSectionTestAccounts','ideaSectionPlanning','ideaSectionChecklist','ideaSectionCosting'].forEach((id) => {
       const section = $(id);
       if (section) ideaSectionObserver.observe(section);
     });
@@ -2273,7 +2640,8 @@
     $('saveIdeaTopButton').addEventListener('click', () => $('ideaForm').requestSubmit());
     $('topAllIdeasButton').addEventListener('click', () => leaveEditorIfAllowed(showDashboard));
     $('topMyNotesButton').addEventListener('click', () => leaveEditorIfAllowed(showMyNotesPage));
-    $('myNotesNav').addEventListener('click', () => leaveEditorIfAllowed(showMyNotesPage));
+    $('myNotesNav').addEventListener('click', () => leaveEditorIfAllowed(() => showMyNotesPage()));
+    $('checklistNav').addEventListener('click', () => leaveEditorIfAllowed(showChecklistPage));
 
     $('cancelIdeaNavigationButton').addEventListener('click', () => {
       pendingIdeaNavigation = null;
@@ -2296,6 +2664,39 @@
         closeUnsavedNavigationDialog();
       }
     });
+
+    $('addChecklistItemButton').addEventListener('click', () => openChecklistEditor());
+    $('closeChecklistEditorButton').addEventListener('click', closeChecklistEditor);
+    $('cancelChecklistEditButton').addEventListener('click', closeChecklistEditor);
+    $('checklistForm').addEventListener('submit', saveChecklistItem);
+    $('checklistLibraryList').addEventListener('click', (event) => {
+      const noteButton = event.target.closest('[data-open-note]');
+      if (noteButton) { openPersonalNoteFromChecklist(noteButton.dataset.openNote); return; }
+      const action = event.target.closest('[data-checklist-action]');
+      if (!action) return;
+      const item = checklistItems.find(row => row.id === action.dataset.id);
+      if (action.dataset.checklistAction === 'edit' && item) openChecklistEditor(item);
+      if (action.dataset.checklistAction === 'delete') deleteChecklistItem(action.dataset.id);
+    });
+    $('ideaChecklistList').addEventListener('click', (event) => {
+      const noteButton = event.target.closest('[data-open-note]');
+      if (noteButton) { openPersonalNoteFromChecklist(noteButton.dataset.openNote); return; }
+      const toggle = event.target.closest('[data-checklist-expand]');
+      if (!toggle) return;
+      const id = toggle.dataset.checklistExpand;
+      const details = document.querySelector(`[data-checklist-details="${CSS.escape(id)}"]`);
+      if (!details) return;
+      const opening = details.classList.contains('hidden');
+      details.classList.toggle('hidden', !opening);
+      const chev = toggle.querySelector('.checklist-chevron');
+      if (chev) chev.textContent = opening ? '▴' : '▾';
+    });
+    $('ideaChecklistList').addEventListener('change', (event) => {
+      const input = event.target.closest('[data-checklist-state]');
+      if (!input) return;
+      saveIdeaChecklistState(input.dataset.id, input.dataset.checklistState, input.checked);
+    });
+
     $('myNoteForm').addEventListener('submit', savePersonalNote);
     $('addMyNoteButton').addEventListener('click', () => {
       if (myNoteIsDirty() && !$('myNoteForm').classList.contains('hidden') && !window.confirm('Discard the unsaved changes in this note?')) return;
@@ -2518,6 +2919,7 @@
         else ideas.unshift(saved);
         activeIdeaId = saved.id;
         $('ideaId').value = saved.id;
+        await loadIdeaChecklistStatuses(saved.id);
         $('ideaPageHeading').textContent = saved.title;
         $('ideaPageSubtext').textContent = 'Edit the project details, notes, links and costs.';
         $('pageTitle').textContent = saved.title;
