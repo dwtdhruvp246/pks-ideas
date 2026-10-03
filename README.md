@@ -52,3 +52,13 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Rich content participates in unsaved-change detection, stale-data/manual reload protection, idea search, and dashboard previews.
 - Existing plain-text Description/Private Notes remain compatible and are converted only when saved after editing.
 - Run the supplied SQL manually to remove old Description/Notes length checks before storing larger formatted content.
+
+
+## v22 stepped indentation
+
+- Rich-text Indent/Outdent now moves normal text exactly 24px per step, up to 8 levels.
+- List items still nest one list level at a time, preserving numbering/bullets.
+- Tab / Shift+Tab uses the same one-step indentation behavior.
+- Toolbar controls now clearly label Indent separately from Left/Center/Right alignment.
+- Safe `margin-left` step values are preserved by HTML sanitization.
+- No Supabase SQL changes are required.
