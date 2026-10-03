@@ -102,3 +102,12 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Existing plain-text dashboard notes remain compatible.
 - Dirty-state and cross-device protection continue to work with formatted HTML.
 - The old 10,000-character dashboard-note database constraint is removed from the reference schema.
+
+
+## v27 compact Dashboard Notes editor
+
+- Dashboard Notes now keeps the full formatting toolbar hidden by default.
+- Added an `Aa Format` control to show/hide formatting without expanding the card.
+- Expanding Dashboard Notes automatically exposes the full formatting toolbar.
+- Long dashboard notes scroll inside a compact editor instead of stretching the dashboard.
+- Rich-text saving, realtime dirty-state protection and all existing formatting remain unchanged.

@@ -554,6 +554,94 @@
     }
 
 
+    /* Dashboard Notes — compact rich editor layout (v27) */
+    .dashboard-note-head-actions {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex:0 0 auto;
+    }
+    .dashboard-format-toggle {
+      padding:8px 11px;
+      font-size:12px;
+    }
+
+    /* Keep the Dashboard clean by hiding the Word toolbar until requested. */
+    .dashboard-rich-editor-shell.ready .rich-editor-toolbar {
+      display:none;
+    }
+    .dashboard-rich-editor-shell.ready.formatting-open .rich-editor-toolbar,
+    .dashboard-notes.expanded .dashboard-rich-editor-shell.ready .rich-editor-toolbar {
+      display:flex;
+    }
+
+    /* The dashboard is a quick view. Long notes scroll inside the card. */
+    .dashboard-notes:not(.expanded) .dashboard-rich-editor-shell .rich-editor-surface .tiptap {
+      min-height:128px;
+      height:128px;
+      max-height:128px;
+      overflow-y:auto;
+      padding:13px 14px;
+    }
+    .dashboard-notes:not(.expanded) .dashboard-rich-editor-shell {
+      flex:0 0 auto;
+    }
+    .dashboard-notes:not(.expanded) .dashboard-rich-editor-shell.formatting-open .rich-editor-surface .tiptap {
+      min-height:112px;
+      height:112px;
+      max-height:112px;
+    }
+
+    .dashboard-notes.expanded .dashboard-format-toggle {
+      display:none;
+    }
+    .dashboard-notes.expanded .dashboard-rich-editor-shell .rich-editor-surface .tiptap {
+      min-height:56vh;
+      height:auto;
+      max-height:none;
+      overflow-y:auto;
+    }
+
+    .dashboard-note-hint {
+      margin-top:8px;
+      line-height:1.4;
+    }
+
+    @media (max-width:800px) {
+      .dashboard-notes:not(.expanded) .dashboard-rich-editor-shell .rich-editor-surface .tiptap {
+        min-height:150px;
+        height:150px;
+        max-height:150px;
+      }
+      .dashboard-notes:not(.expanded) .dashboard-rich-editor-shell.formatting-open .rich-editor-surface .tiptap {
+        min-height:130px;
+        height:130px;
+        max-height:130px;
+      }
+    }
+
+    @media (max-width:560px) {
+      .dashboard-notes-head {
+        align-items:flex-start;
+      }
+      .dashboard-note-head-actions {
+        gap:6px;
+      }
+      .dashboard-format-toggle,
+      .dashboard-note-expand {
+        padding:8px 9px;
+        min-height:38px;
+      }
+      .dashboard-rich-editor-shell.ready.formatting-open .rich-editor-toolbar,
+      .dashboard-notes.expanded .dashboard-rich-editor-shell.ready .rich-editor-toolbar {
+        padding:6px;
+      }
+      .dashboard-notes.expanded .dashboard-rich-editor-shell .rich-editor-surface .tiptap {
+        min-height:62vh;
+      }
+    }
+
+
     /* Checklist workspace + per-idea checklist */
     .checklist-page { max-width:1180px; margin:0 auto; }
     .checklist-head { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:22px; flex-wrap:wrap; }
@@ -789,14 +877,17 @@
                   <h3 id="dashboardNotesHeading">Notes</h3>
                   <p>Keep a quick list of what you need to do across your projects.</p>
                 </div>
-                <button id="toggleDashboardNotesSize" class="btn btn-secondary dashboard-note-expand" type="button" aria-expanded="false">⛶ Expand</button>
+                <div class="dashboard-note-head-actions">
+                  <button id="toggleDashboardNoteFormatting" class="btn btn-secondary dashboard-format-toggle" type="button" aria-expanded="false">Aa Format</button>
+                  <button id="toggleDashboardNotesSize" class="btn btn-secondary dashboard-note-expand" type="button" aria-expanded="false">⛶ Expand</button>
+                </div>
               </div>
               <div id="dashboardNoteRichShell" class="rich-editor-shell dashboard-rich-editor-shell">
                 <div id="dashboardNoteRichToolbar" class="rich-editor-toolbar" aria-label="Dashboard Notes formatting toolbar"></div>
                 <div id="dashboardNoteRichEditor" class="rich-editor-surface"></div>
                 <textarea id="dashboardNoteInput" class="input dashboard-note-textarea rich-editor-fallback" placeholder="Type what you need to do..."></textarea>
               </div>
-              <div class="dashboard-note-hint">Enter creates a new paragraph/list item • Ctrl/Cmd + Enter saves</div>
+              <div class="dashboard-note-hint">Enter = new paragraph / next list item • Ctrl/Cmd + Enter = save</div>
               <div class="dashboard-note-footer">
                 <span id="dashboardNoteStatus" class="dashboard-note-status" role="status" aria-live="polite"></span>
                 <button id="saveDashboardNoteButton" class="btn btn-primary" type="button">Save note</button>
@@ -4577,6 +4668,30 @@
           else $('dashboardNoteInput').focus({ preventScroll: true });
           panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 80);
+      }
+    });
+
+    $('toggleDashboardNoteFormatting').addEventListener('click', () => {
+      const shell = $('dashboardNoteRichShell');
+      const button = $('toggleDashboardNoteFormatting');
+      const panel = document.querySelector('.dashboard-notes');
+      if (!shell || !button || !panel || panel.classList.contains('expanded')) return;
+      const opening = !shell.classList.contains('formatting-open');
+      shell.classList.toggle('formatting-open', opening);
+      button.setAttribute('aria-expanded', String(opening));
+      button.textContent = opening ? 'Aa Hide format' : 'Aa Format';
+      if (opening) window.setTimeout(() => dashboardRichEditor?.editable?.focus({ preventScroll:true }), 40);
+    });
+
+    $('toggleDashboardNotesSize').addEventListener('click', () => {
+      const panel = document.querySelector('.dashboard-notes');
+      const shell = $('dashboardNoteRichShell');
+      const formatButton = $('toggleDashboardNoteFormatting');
+      if (!panel || !shell || !formatButton) return;
+      if (!panel.classList.contains('expanded')) {
+        shell.classList.remove('formatting-open');
+        formatButton.setAttribute('aria-expanded', 'false');
+        formatButton.textContent = 'Aa Format';
       }
     });
 
