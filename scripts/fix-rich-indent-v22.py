@@ -131,6 +131,7 @@ else:
           syncIdeaRichEditor(editor);
           markEditorInteraction();
           updateIdeaRichToolbar(editor);
+          return;
         }"""
     new_idea_tab = """        if (event.key === 'Tab' && ideaRichSelectionInside(editor)) {
           event.preventDefault();
@@ -138,6 +139,7 @@ else:
           syncIdeaRichEditor(editor);
           markEditorInteraction();
           updateIdeaRichToolbar(editor);
+          return;
         }"""
     html = replace_required(html, old_idea_tab, new_idea_tab, 'Idea Tab indentation')
 
