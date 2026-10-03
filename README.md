@@ -25,3 +25,13 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - no browser-side character limits on Dashboard Notes, My Notes content, or Idea Private Notes
 - My Notes categories and filtering
 - unsaved-change guards
+
+
+## v19 rich text — My Notes
+
+- My Notes Content now uses a Word-like rich-text editor when the editor CDN loads successfully.
+- Supports headings, bold, italic, underline, strikethrough, bullet/numbered lists, list indentation, alignment, links, quotes, horizontal rules and tables.
+- Existing plain-text notes are preserved and converted to rich HTML only when edited/saved.
+- Stored HTML is sanitized before save/render.
+- The original textarea remains as a graceful fallback if the rich editor cannot load.
+- No Supabase schema changes are required for this stage because `personal_notes.content` is already a text column.
