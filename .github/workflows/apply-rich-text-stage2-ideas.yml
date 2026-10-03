@@ -1,0 +1,35 @@
+name: Apply rich text Stage 2 Ideas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/upgrade-rich-text-stage2-ideas.py
+      - .github/workflows/apply-rich-text-stage2-ideas.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Apply Stage 2 rich-text patch
+        run: python3 scripts/upgrade-rich-text-stage2-ideas.py
+
+      - name: Commit generated app changes
+        run: |
+          if git diff --quiet -- index.html service-worker.js README.md; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html service-worker.js README.md
+          git commit -m "Upgrade Idea Description and Private Notes to rich text"
+          git push origin main
