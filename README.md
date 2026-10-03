@@ -83,3 +83,13 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Fixes stale `start=2` values after Backspace, Enter, or typing `1.` + Space.
 - Applies to My Notes, Idea Description and Private Notes.
 - No Supabase SQL changes are required.
+
+
+## v25 rich text — Checklist Details
+
+- Checklist Details now uses the same self-contained Word-like rich-text editor as My Notes and Idea notes.
+- Supports headings, bold, italic, underline, strikethrough, bullet/numbered lists, stepped indentation, alignment, links, quotes, horizontal rules and tables.
+- Numbered-list continuation/start fixes are reused in Checklist Details.
+- Formatted details render in the Checklist library and when an item is expanded inside an Idea.
+- Existing plain-text checklist details remain compatible.
+- No Supabase schema change is required because checklist_items.details is already an unrestricted text column.
