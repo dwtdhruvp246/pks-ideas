@@ -1,0 +1,35 @@
+name: Apply rich text Stage 4 Dashboard Notes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/upgrade-rich-text-stage4-dashboard.py
+      - .github/workflows/apply-rich-text-stage4-dashboard.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Apply Dashboard Notes rich-text patch
+        run: python3 scripts/upgrade-rich-text-stage4-dashboard.py
+
+      - name: Commit generated app changes
+        run: |
+          if git diff --quiet -- index.html service-worker.js README.md supabase.sql; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html service-worker.js README.md supabase.sql
+          git commit -m "Upgrade Dashboard Notes to rich text"
+          git push origin main
