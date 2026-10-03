@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pks-ideas-v19';
+const CACHE_NAME = 'pks-ideas-v20';
 const APP_SHELL = [
   './',
   './index.html',

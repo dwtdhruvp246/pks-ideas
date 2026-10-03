@@ -35,3 +35,11 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Stored HTML is sanitized before save/render.
 - The original textarea remains as a graceful fallback if the rich editor cannot load.
 - No Supabase schema changes are required for this stage because `personal_notes.content` is already a text column.
+
+
+## v20 rich text reliability fix
+
+- Replaced the external Tiptap/CDN dependency with a self-contained browser rich-text editor.
+- My Notes formatting now works without loading third-party editor modules.
+- Keeps headings, bold, italic, underline, strikethrough, lists, smart `1.` / `-` list creation, Tab/Shift+Tab indentation, alignment, links, quotes, horizontal rules, tables, undo/redo and HTML sanitization.
+- No Supabase SQL changes are required.
