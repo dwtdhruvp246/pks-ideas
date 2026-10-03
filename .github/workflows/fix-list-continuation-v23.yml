@@ -1,0 +1,35 @@
+name: Fix numbered list continuation v23
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/fix-list-continuation-v23.py
+      - .github/workflows/fix-list-continuation-v23.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Apply numbered-list continuation fix
+        run: python3 scripts/fix-list-continuation-v23.py
+
+      - name: Commit generated app changes
+        run: |
+          if git diff --quiet -- index.html service-worker.js README.md; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html service-worker.js README.md
+          git commit -m "Fix numbered list continuation around bullet details"
+          git push origin main
