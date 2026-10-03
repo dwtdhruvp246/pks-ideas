@@ -1,0 +1,32 @@
+name: Fix Dashboard rich initialization v26
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/fix-dashboard-rich-init-v26.py
+      - .github/workflows/fix-dashboard-rich-init-v26.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Apply initialization fix
+        run: python3 scripts/fix-dashboard-rich-init-v26.py
+      - name: Commit fix
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix Dashboard rich editor initial load"
+          git push origin main
