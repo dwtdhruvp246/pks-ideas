@@ -93,3 +93,12 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Formatted details render in the Checklist library and when an item is expanded inside an Idea.
 - Existing plain-text checklist details remain compatible.
 - No Supabase schema change is required because checklist_items.details is already an unrestricted text column.
+
+
+## v26 rich text — Dashboard Notes
+
+- Dashboard Notes now uses the same self-contained rich-text editor as My Notes, Ideas and Checklist Details.
+- Enter creates normal paragraphs/list items; Ctrl/Cmd + Enter saves.
+- Existing plain-text dashboard notes remain compatible.
+- Dirty-state and cross-device protection continue to work with formatted HTML.
+- The old 10,000-character dashboard-note database constraint is removed from the reference schema.

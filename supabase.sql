@@ -217,10 +217,13 @@ end $$;
 create table if not exists public.dashboard_notes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references auth.users(id) on delete cascade,
-  content text not null default '' check (char_length(content) <= 10000),
+  content text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.dashboard_notes
+  drop constraint if exists dashboard_notes_content_check;
 
 create index if not exists dashboard_notes_user_id_idx on public.dashboard_notes(user_id);
 

@@ -537,6 +537,23 @@
     }
 
 
+    /* Rich text editor — Stage 4: Dashboard Notes */
+    .dashboard-rich-editor-shell .rich-editor-surface .tiptap {
+      min-height:180px;
+    }
+    .dashboard-notes.expanded .dashboard-rich-editor-shell .rich-editor-surface .tiptap {
+      min-height:58vh;
+    }
+    .dashboard-rich-editor-shell.ready > .dashboard-note-textarea {
+      display:none;
+    }
+
+    @media (max-width:560px) {
+      .dashboard-rich-editor-shell .rich-editor-surface .tiptap { min-height:190px; }
+      .dashboard-notes.expanded .dashboard-rich-editor-shell .rich-editor-surface .tiptap { min-height:64vh; }
+    }
+
+
     /* Checklist workspace + per-idea checklist */
     .checklist-page { max-width:1180px; margin:0 auto; }
     .checklist-head { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:22px; flex-wrap:wrap; }
@@ -774,8 +791,12 @@
                 </div>
                 <button id="toggleDashboardNotesSize" class="btn btn-secondary dashboard-note-expand" type="button" aria-expanded="false">⛶ Expand</button>
               </div>
-              <textarea id="dashboardNoteInput" class="input dashboard-note-textarea" placeholder="Type what you need to do..."></textarea>
-              <div class="dashboard-note-hint">Press Enter to save • Shift + Enter for a new line</div>
+              <div id="dashboardNoteRichShell" class="rich-editor-shell dashboard-rich-editor-shell">
+                <div id="dashboardNoteRichToolbar" class="rich-editor-toolbar" aria-label="Dashboard Notes formatting toolbar"></div>
+                <div id="dashboardNoteRichEditor" class="rich-editor-surface"></div>
+                <textarea id="dashboardNoteInput" class="input dashboard-note-textarea rich-editor-fallback" placeholder="Type what you need to do..."></textarea>
+              </div>
+              <div class="dashboard-note-hint">Enter creates a new paragraph/list item • Ctrl/Cmd + Enter saves</div>
               <div class="dashboard-note-footer">
                 <span id="dashboardNoteStatus" class="dashboard-note-status" role="status" aria-live="polite"></span>
                 <button id="saveDashboardNoteButton" class="btn btn-primary" type="button">Save note</button>
@@ -1168,6 +1189,7 @@
     let ideaChecklistStatusesRealtimeChannel = null;
     let editingChecklistItemId = null;
     let checklistRichEditor = null;
+    let dashboardRichEditor = null;
     let myNoteRichEditor = null;
     let richHtmlSanitizer = null;
     let richEditorLoadPromise = null;
@@ -2961,8 +2983,8 @@
       savedFormSnapshot = '';
       setUnsavedState(false);
       if ($('sidebarIdeas')) $('sidebarIdeas').innerHTML = '';
-      if ($('dashboardNoteInput')) $('dashboardNoteInput').value = '';
-      dashboardNoteSavedValue = '';
+      if ($('dashboardNoteInput')) setDashboardNoteRichContent('');
+      dashboardNoteSavedValue = sanitizeRichHtml(normalizeRichContent(''));
       updateDashboardNoteStatus('');
       personalNotes = [];
       personalNoteCategories = [];
@@ -3021,6 +3043,209 @@
       showLogin();
     });
 
+
+    function syncDashboardRichEditor() {
+      if (!dashboardRichEditor?.editable || !dashboardRichEditor?.textarea) return;
+      repairOrderedListContinuations(dashboardRichEditor.editable);
+      dashboardRichEditor.textarea.value = sanitizeRichHtml(dashboardRichEditor.editable.innerHTML);
+    }
+
+    function getDashboardNoteContentForStorage() {
+      if (dashboardRichEditor?.editable && dashboardRichEditor.shell?.classList.contains('ready')) {
+        repairOrderedListContinuations(dashboardRichEditor.editable);
+        return sanitizeRichHtml(dashboardRichEditor.editable.innerHTML).trim();
+      }
+      return $('dashboardNoteInput')?.value || '';
+    }
+
+    function setDashboardNoteRichContent(value = '') {
+      const textarea = $('dashboardNoteInput');
+      const normalized = normalizeRichContent(value);
+      if (dashboardRichEditor?.editable) {
+        dashboardRichEditor.editable.innerHTML = normalized;
+        repairOrderedListContinuations(dashboardRichEditor.editable);
+        const clean = sanitizeRichHtml(dashboardRichEditor.editable.innerHTML);
+        dashboardRichEditor.editable.innerHTML = clean || '<p><br></p>';
+        if (textarea) textarea.value = clean;
+        updateIdeaRichToolbar(dashboardRichEditor);
+      } else if (textarea) {
+        textarea.value = value || '';
+      }
+    }
+
+    function execDashboardRichCommand(command, value = null) {
+      dashboardRichEditor?.editable?.focus();
+      try { document.execCommand(command, false, value); }
+      catch (error) { console.warn(`Dashboard rich text command failed: ${command}`, error); }
+      syncDashboardRichEditor();
+      if (dashboardNoteIsDirty()) updateDashboardNoteStatus('unsaved', 'Unsaved changes');
+      else updateDashboardNoteStatus('', '');
+      updateIdeaRichToolbar(dashboardRichEditor);
+    }
+
+    function runDashboardRichCommand(command) {
+      const editor = dashboardRichEditor;
+      if (!editor) return;
+      switch (command) {
+        case 'undo': execDashboardRichCommand('undo'); break;
+        case 'redo': execDashboardRichCommand('redo'); break;
+        case 'bold': execDashboardRichCommand('bold'); break;
+        case 'italic': execDashboardRichCommand('italic'); break;
+        case 'underline': execDashboardRichCommand('underline'); break;
+        case 'strike': execDashboardRichCommand('strikeThrough'); break;
+        case 'bulletList': execDashboardRichCommand('insertUnorderedList'); break;
+        case 'orderedList': execDashboardRichCommand('insertOrderedList'); break;
+        case 'indent': stepRichIndent(editor.editable, 1); break;
+        case 'outdent': stepRichIndent(editor.editable, -1); break;
+        case 'alignLeft': execDashboardRichCommand('justifyLeft'); break;
+        case 'alignCenter': execDashboardRichCommand('justifyCenter'); break;
+        case 'alignRight': execDashboardRichCommand('justifyRight'); break;
+        case 'blockquote': execDashboardRichCommand('formatBlock', 'blockquote'); break;
+        case 'horizontalRule': execDashboardRichCommand('insertHorizontalRule'); break;
+        case 'clearFormatting': execDashboardRichCommand('removeFormat'); break;
+        case 'link': {
+          const existing = ideaRichClosest(editor, 'a');
+          const previous = existing?.getAttribute('href') || '';
+          const href = window.prompt('Enter the link URL. Leave blank to remove the current link.', previous);
+          if (href === null) break;
+          const trimmed = href.trim();
+          if (!trimmed) execDashboardRichCommand('unlink');
+          else {
+            const safe = /^(https?:\/\/|mailto:)/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+            execDashboardRichCommand('createLink', safe);
+            const link = ideaRichClosest(editor, 'a');
+            if (link) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+          }
+          break;
+        }
+        case 'insertTable': {
+          const rowsValue = window.prompt('How many rows?', '3');
+          if (rowsValue === null) break;
+          const colsValue = window.prompt('How many columns?', '3');
+          if (colsValue === null) break;
+          const rows = Math.min(20, Math.max(2, Number.parseInt(rowsValue, 10) || 3));
+          const cols = Math.min(10, Math.max(2, Number.parseInt(colsValue, 10) || 3));
+          let table = '<table><tbody>';
+          for (let r = 0; r < rows; r += 1) {
+            table += '<tr>';
+            for (let c = 0; c < cols; c += 1) table += r === 0 ? '<th><br></th>' : '<td><br></td>';
+            table += '</tr>';
+          }
+          table += '</tbody></table><p><br></p>';
+          insertIdeaRichHtml(editor, table);
+          break;
+        }
+        case 'addRow': addIdeaRichTableRow(editor); break;
+        case 'addColumn': addIdeaRichTableColumn(editor); break;
+        case 'deleteRow': deleteIdeaRichTableRow(editor); break;
+        case 'deleteColumn': deleteIdeaRichTableColumn(editor); break;
+        case 'deleteTable': ideaRichClosest(editor, 'table')?.remove(); editor.editable.focus(); break;
+      }
+      syncDashboardRichEditor();
+      if (dashboardNoteIsDirty()) updateDashboardNoteStatus('unsaved', 'Unsaved changes');
+      else updateDashboardNoteStatus('', '');
+      updateIdeaRichToolbar(editor);
+    }
+
+    function handleDashboardRichSmartList(event) {
+      const editor = dashboardRichEditor;
+      if (!editor || event.key !== ' ' || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      const selection = window.getSelection();
+      if (!selection?.rangeCount || !selection.isCollapsed || !editor.editable.contains(selection.anchorNode)) return;
+      const range = selection.getRangeAt(0);
+      let block = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
+      block = block?.closest?.('p,div');
+      if (!block || !editor.editable.contains(block)) return;
+      const prefixRange = document.createRange();
+      prefixRange.selectNodeContents(block);
+      try { prefixRange.setEnd(range.endContainer, range.endOffset); } catch { return; }
+      const prefix = prefixRange.toString();
+      const ordered = /^\s*\d+\.$/.test(prefix);
+      const bullet = /^\s*[-*]$/.test(prefix);
+      if (!ordered && !bullet) return;
+      event.preventDefault();
+      prefixRange.deleteContents();
+      selection.removeAllRanges();
+      const caret = document.createRange();
+      caret.selectNodeContents(block);
+      caret.collapse(true);
+      selection.addRange(caret);
+      document.execCommand(ordered ? 'insertOrderedList' : 'insertUnorderedList', false, null);
+      syncDashboardRichEditor();
+      updateIdeaRichToolbar(editor);
+      if (dashboardNoteIsDirty()) updateDashboardNoteStatus('unsaved', 'Unsaved changes');
+    }
+
+    function initializeDashboardRichTextEditor() {
+      const shell = $('dashboardNoteRichShell');
+      const host = $('dashboardNoteRichEditor');
+      const textarea = $('dashboardNoteInput');
+      const toolbar = $('dashboardNoteRichToolbar');
+      if (!shell || !host || !textarea || !toolbar) return null;
+
+      toolbar.innerHTML = buildIdeaRichToolbar('dashboardNoteRichBlockType');
+      host.innerHTML = '<div class="tiptap" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-placeholder="Type what you need to do..."></div>';
+      const editable = host.firstElementChild;
+      dashboardRichEditor = { shell, host, textarea, toolbar, editable, blockSelectId:'dashboardNoteRichBlockType' };
+      editable.innerHTML = normalizeRichContent(textarea.value || '');
+
+      editable.addEventListener('input', () => {
+        syncDashboardRichEditor();
+        if (dashboardNoteIsDirty()) updateDashboardNoteStatus('unsaved', 'Unsaved changes');
+        else updateDashboardNoteStatus('', '');
+        updateIdeaRichToolbar(dashboardRichEditor);
+      });
+      editable.addEventListener('keyup', () => updateIdeaRichToolbar(dashboardRichEditor));
+      editable.addEventListener('mouseup', () => updateIdeaRichToolbar(dashboardRichEditor));
+      editable.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          saveDashboardNote();
+          return;
+        }
+        if (event.key === 'Tab' && ideaRichSelectionInside(dashboardRichEditor)) {
+          event.preventDefault();
+          stepRichIndent(editable, event.shiftKey ? -1 : 1);
+          syncDashboardRichEditor();
+          if (dashboardNoteIsDirty()) updateDashboardNoteStatus('unsaved', 'Unsaved changes');
+          updateIdeaRichToolbar(dashboardRichEditor);
+          return;
+        }
+        handleDashboardRichSmartList(event);
+      });
+      editable.addEventListener('paste', (event) => {
+        const htmlData = event.clipboardData?.getData('text/html') || '';
+        const plainData = event.clipboardData?.getData('text/plain') || '';
+        if (!htmlData) return;
+        event.preventDefault();
+        insertIdeaRichHtml(dashboardRichEditor, sanitizeRichHtml(htmlData) || legacyTextToHtml(plainData));
+        syncDashboardRichEditor();
+        if (dashboardNoteIsDirty()) updateDashboardNoteStatus('unsaved', 'Unsaved changes');
+      });
+
+      toolbar.addEventListener('mousedown', (event) => {
+        if (event.target.closest('button')) event.preventDefault();
+      });
+      toolbar.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-idea-rich-command]');
+        if (!button || button.disabled) return;
+        runDashboardRichCommand(button.dataset.ideaRichCommand);
+      });
+      $('dashboardNoteRichBlockType')?.addEventListener('change', (event) => {
+        const map = { paragraph:'p', heading1:'h1', heading2:'h2', heading3:'h3' };
+        execDashboardRichCommand('formatBlock', map[event.target.value] || 'p');
+      });
+      document.addEventListener('selectionchange', () => {
+        if (ideaRichSelectionInside(dashboardRichEditor)) updateIdeaRichToolbar(dashboardRichEditor);
+      });
+
+      shell.classList.add('ready');
+      syncDashboardRichEditor();
+      updateIdeaRichToolbar(dashboardRichEditor);
+      return dashboardRichEditor;
+    }
+
+
     function updateDashboardNoteStatus(state = '', message = '') {
       const status = $('dashboardNoteStatus');
       if (!status) return;
@@ -3030,7 +3255,8 @@
 
     function dashboardNoteIsDirty() {
       const input = $('dashboardNoteInput');
-      return Boolean(input && input.value !== dashboardNoteSavedValue);
+      if (!input) return false;
+      return getDashboardNoteContentForStorage() !== dashboardNoteSavedValue;
     }
 
     async function loadDashboardNote() {
@@ -3056,8 +3282,8 @@
         }
         return;
       }
-      if (input) input.value = value;
-      dashboardNoteSavedValue = value;
+      if (input) setDashboardNoteRichContent(value);
+      dashboardNoteSavedValue = sanitizeRichHtml(normalizeRichContent(value));
       updateDashboardNoteStatus('', '');
     }
 
@@ -3065,7 +3291,7 @@
       if (!currentUser || isSavingDashboardNote) return;
       const button = $('saveDashboardNoteButton');
       const input = $('dashboardNoteInput');
-      const content = input.value;
+      const content = getDashboardNoteContentForStorage();
 
       isSavingDashboardNote = true;
       button.disabled = true;
@@ -3088,8 +3314,8 @@
         return;
       }
 
-      dashboardNoteSavedValue = data?.content ?? content;
-      if (input.value === dashboardNoteSavedValue) {
+      dashboardNoteSavedValue = sanitizeRichHtml(normalizeRichContent(data?.content ?? content));
+      if (getDashboardNoteContentForStorage() === dashboardNoteSavedValue) {
         updateDashboardNoteStatus('saved', 'Saved');
         window.setTimeout(() => {
           if (!dashboardNoteIsDirty()) updateDashboardNoteStatus('', '');
@@ -3131,22 +3357,22 @@
           if (!input) return;
 
           if (eventType === 'DELETE') {
-            if (!dashboardNoteIsDirty()) input.value = '';
-            dashboardNoteSavedValue = '';
+            if (!dashboardNoteIsDirty()) setDashboardNoteRichContent('');
+            dashboardNoteSavedValue = sanitizeRichHtml(normalizeRichContent(''));
             updateDashboardNoteStatus('', '');
             return;
           }
 
           const incoming = changed?.content ?? '';
-          if (!dashboardNoteIsDirty() || input.value === dashboardNoteSavedValue) {
-            input.value = incoming;
-            dashboardNoteSavedValue = incoming;
+          if (!dashboardNoteIsDirty() || getDashboardNoteContentForStorage() === dashboardNoteSavedValue) {
+            setDashboardNoteRichContent(incoming);
+            dashboardNoteSavedValue = sanitizeRichHtml(normalizeRichContent(incoming));
             updateDashboardNoteStatus('saved', 'Updated from another device');
             window.setTimeout(() => {
               if (!dashboardNoteIsDirty()) updateDashboardNoteStatus('', '');
             }, 1800);
           } else if (incoming !== dashboardNoteSavedValue) {
-            dashboardNoteSavedValue = incoming;
+            dashboardNoteSavedValue = sanitizeRichHtml(normalizeRichContent(incoming));
             updateDashboardNoteStatus('unsaved', 'Changed on another device — your local text is not saved');
           }
         })
@@ -4343,7 +4569,8 @@
       button.textContent = expanding ? '⛶ Collapse' : '⛶ Expand';
       if (expanding) {
         window.setTimeout(() => {
-          $('dashboardNoteInput').focus({ preventScroll: true });
+          if (dashboardRichEditor?.editable) dashboardRichEditor.editable.focus({ preventScroll: true });
+          else $('dashboardNoteInput').focus({ preventScroll: true });
           panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 80);
       }
@@ -4351,14 +4578,9 @@
 
     $('saveDashboardNoteButton').addEventListener('click', saveDashboardNote);
     $('dashboardNoteInput').addEventListener('input', () => {
+      if (dashboardRichEditor?.shell?.classList.contains('ready')) return;
       if (dashboardNoteIsDirty()) updateDashboardNoteStatus('unsaved', 'Unsaved changes');
       else updateDashboardNoteStatus('', '');
-    });
-    $('dashboardNoteInput').addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        saveDashboardNote();
-      }
     });
 
     ['searchInput', 'statusFilter', 'categoryFilter'].forEach(id => {
@@ -4462,6 +4684,7 @@
     initializeRichTextEditors();
     initializeIdeaRichTextEditors();
     initializeChecklistRichTextEditor();
+    initializeDashboardRichTextEditor();
     initializeAuth();
   </script>
 </body>
