@@ -642,6 +642,69 @@
     }
 
 
+    /* Rich editor toolbar polish — v28 */
+    .rich-toolbar-more-group {
+      display:none;
+      margin-left:auto;
+      border-right:0 !important;
+      padding-right:0 !important;
+    }
+    .rich-toolbar-more-button {
+      min-width:auto;
+      padding:6px 10px;
+      white-space:nowrap;
+    }
+
+    @media (max-width:700px) {
+      .rich-editor-toolbar.rich-toolbar-polished {
+        flex-wrap:wrap;
+        overflow-x:hidden;
+        white-space:normal;
+        gap:5px;
+        align-items:center;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished > .rich-editor-toolbar-group {
+        border-right:0;
+        padding-right:0;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished .rich-toolbar-advanced {
+        display:none;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished.rich-toolbar-more-open .rich-toolbar-advanced {
+        display:inline-flex;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished .rich-toolbar-more-group {
+        display:inline-flex;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished .rich-tool-button {
+        min-width:36px;
+        min-height:36px;
+        padding:6px 8px;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished .rich-tool-select {
+        min-width:118px;
+        width:auto;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished.rich-toolbar-more-open {
+        align-items:flex-start;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished.rich-toolbar-more-open .rich-toolbar-more-group {
+        margin-left:0;
+      }
+    }
+
+    @media (max-width:420px) {
+      .rich-editor-toolbar.rich-toolbar-polished .rich-tool-button {
+        min-width:34px;
+        min-height:34px;
+        font-size:12px;
+      }
+      .rich-editor-toolbar.rich-toolbar-polished .rich-toolbar-essential:nth-of-type(3) {
+        flex:1 1 auto;
+      }
+    }
+
+
     /* Checklist workspace + per-idea checklist */
     .checklist-page { max-width:1180px; margin:0 auto; }
     .checklist-head { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:22px; flex-wrap:wrap; }
@@ -2362,6 +2425,49 @@
       refreshMyNoteDirtyState();
       updateMyNoteRichToolbar();
     }
+
+
+    function enhanceRichToolbarForMobile(toolbar) {
+      if (!toolbar || toolbar.dataset.mobilePolished === 'true') return;
+      const groups = [...toolbar.querySelectorAll(':scope > .rich-editor-toolbar-group')];
+      if (!groups.length) return;
+
+      // Keep Undo/Redo, basic text formatting and list/indent controls visible.
+      const essentialIndexes = new Set([0, 2, 3]);
+      groups.forEach((group, index) => {
+        group.classList.add(essentialIndexes.has(index) ? 'rich-toolbar-essential' : 'rich-toolbar-advanced');
+      });
+
+      const moreGroup = document.createElement('span');
+      moreGroup.className = 'rich-editor-toolbar-group rich-toolbar-more-group';
+      const moreButton = document.createElement('button');
+      moreButton.type = 'button';
+      moreButton.className = 'rich-tool-button rich-toolbar-more-button';
+      moreButton.textContent = 'More ▾';
+      moreButton.setAttribute('aria-expanded', 'false');
+      moreButton.setAttribute('aria-label', 'Show more formatting tools');
+      moreGroup.appendChild(moreButton);
+      toolbar.appendChild(moreGroup);
+
+      moreButton.addEventListener('mousedown', (event) => event.preventDefault());
+      moreButton.addEventListener('click', () => {
+        const opening = !toolbar.classList.contains('rich-toolbar-more-open');
+        toolbar.classList.toggle('rich-toolbar-more-open', opening);
+        moreButton.textContent = opening ? 'Less ▴' : 'More ▾';
+        moreButton.setAttribute('aria-expanded', String(opening));
+        moreButton.setAttribute('aria-label', opening ? 'Hide extra formatting tools' : 'Show more formatting tools');
+      });
+
+      toolbar.classList.add('rich-toolbar-polished');
+      toolbar.dataset.mobilePolished = 'true';
+    }
+
+    function initializeRichToolbarPolish() {
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.rich-editor-toolbar').forEach(enhanceRichToolbarForMobile);
+      });
+    }
+
 
     async function initializeRichTextEditors() {
       if (richEditorLoadPromise) return richEditorLoadPromise;
@@ -4804,6 +4910,7 @@
     initializeIdeaRichTextEditors();
     initializeChecklistRichTextEditor();
     initializeDashboardRichTextEditor();
+    initializeRichToolbarPolish();
     initializeAuth();
   </script>
 </body>

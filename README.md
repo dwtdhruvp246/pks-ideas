@@ -111,3 +111,13 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Expanding Dashboard Notes automatically exposes the full formatting toolbar.
 - Long dashboard notes scroll inside a compact editor instead of stretching the dashboard.
 - Rich-text saving, realtime dirty-state protection and all existing formatting remain unchanged.
+
+
+## v28 mobile rich-text toolbar polish
+
+- Rich-text toolbars are now compact and responsive on phones.
+- Undo/Redo, bold/italic/underline/strike and list/indent controls stay visible.
+- Headings, alignment, links, quotes, tables and other advanced controls move behind a `More` button on small screens.
+- Desktop toolbars keep the full control set visible.
+- Applies to My Notes, Idea Description, Private Notes, Checklist Details and Dashboard Notes.
+- No Supabase SQL changes are required.
