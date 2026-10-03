@@ -43,3 +43,12 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - My Notes formatting now works without loading third-party editor modules.
 - Keeps headings, bold, italic, underline, strikethrough, lists, smart `1.` / `-` list creation, Tab/Shift+Tab indentation, alignment, links, quotes, horizontal rules, tables, undo/redo and HTML sanitization.
 - No Supabase SQL changes are required.
+
+
+## v21 rich text — Idea fields
+
+- Idea **Description** now uses the same self-contained Word-like rich-text editor as My Notes.
+- Idea **Private Notes** now uses the same editor and keeps its Expand/Collapse behavior.
+- Rich content participates in unsaved-change detection, stale-data/manual reload protection, idea search, and dashboard previews.
+- Existing plain-text Description/Private Notes remain compatible and are converted only when saved after editing.
+- Run the supplied SQL manually to remove old Description/Notes length checks before storing larger formatted content.
