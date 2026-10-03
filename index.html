@@ -1346,25 +1346,49 @@
       return [...list.children].filter((child) => child.tagName === 'LI').length;
     }
 
+    function isEmptyRichBlock(element) {
+      if (!element) return false;
+      if (!['P','DIV'].includes(element.tagName)) return false;
+      return !(element.textContent || '').trim() && !element.querySelector('img,table,ul,ol,hr');
+    }
+
     function repairOrderedListContinuations(editable) {
       if (!editable) return;
-      editable.querySelectorAll('ol').forEach((orderedList) => {
+
+      // Only top-level numbered lists participate in automatic continuation.
+      // Nested numbered lists keep the browser's own numbering semantics.
+      [...editable.children].filter((element) => element.tagName === 'OL').forEach((orderedList) => {
         let previous = orderedList.previousElementSibling;
         let crossedBulletDetails = false;
 
-        while (previous?.tagName === 'UL') {
-          crossedBulletDetails = true;
-          previous = previous.previousElementSibling;
+        // Empty spacer paragraphs are allowed around bullet-detail blocks, but
+        // real paragraphs/headings are section breaks and reset numbering.
+        while (previous) {
+          if (previous.tagName === 'UL') {
+            crossedBulletDetails = true;
+            previous = previous.previousElementSibling;
+            continue;
+          }
+          if (isEmptyRichBlock(previous)) {
+            previous = previous.previousElementSibling;
+            continue;
+          }
+          break;
         }
 
-        if (!crossedBulletDetails || previous?.tagName !== 'OL') return;
+        if (crossedBulletDetails && previous?.tagName === 'OL') {
+          const previousStart = Math.max(1, Number.parseInt(previous.getAttribute('start') || '1', 10) || 1);
+          const previousCount = directListItemCount(previous);
+          if (previousCount) {
+            const expectedStart = Math.min(10000, previousStart + previousCount);
+            orderedList.setAttribute('start', String(expectedStart));
+            return;
+          }
+        }
 
-        const previousStart = Math.max(1, Number.parseInt(previous.getAttribute('start') || '1', 10) || 1);
-        const previousCount = directListItemCount(previous);
-        if (!previousCount) return;
-
-        const expectedStart = Math.min(10000, previousStart + previousCount);
-        orderedList.setAttribute('start', String(expectedStart));
+        // This is a new independent list. Never inherit a stale start="2"
+        // (or another continuation value) from a previous browser edit.
+        orderedList.removeAttribute('start');
       });
     }
 

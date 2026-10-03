@@ -72,3 +72,14 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Applied to My Notes, Idea Description, and Idea Private Notes.
 - Independent numbered lists separated by normal paragraphs/headings still start at 1.
 - No Supabase SQL changes are required.
+
+
+## v24 numbered-list start repair
+
+- Independent top-level numbered lists always start at 1.
+- Numbering only continues across intervening bullet-detail lists.
+- Real paragraph/heading section breaks reset numbering back to 1.
+- Empty spacer paragraphs around bullet details do not break continuation.
+- Fixes stale `start=2` values after Backspace, Enter, or typing `1.` + Space.
+- Applies to My Notes, Idea Description and Private Notes.
+- No Supabase SQL changes are required.
