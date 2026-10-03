@@ -62,3 +62,13 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Toolbar controls now clearly label Indent separately from Left/Center/Right alignment.
 - Safe `margin-left` step values are preserved by HTML sanitization.
 - No Supabase SQL changes are required.
+
+
+## v23 numbered-list continuation
+
+- Numbered lists now continue after an intervening bulleted detail list instead of restarting at 1.
+- Example: `1. Dashboard` → bullet details → `2. Workspace`.
+- Continued numbering is stored using the safe HTML `ol start` attribute and survives save/reload.
+- Applied to My Notes, Idea Description, and Idea Private Notes.
+- Independent numbered lists separated by normal paragraphs/headings still start at 1.
+- No Supabase SQL changes are required.

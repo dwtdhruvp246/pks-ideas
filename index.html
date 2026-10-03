@@ -1339,8 +1339,39 @@
       return found && editor.editable.contains(found) ? found : null;
     }
 
+
+
+    function directListItemCount(list) {
+      if (!list) return 0;
+      return [...list.children].filter((child) => child.tagName === 'LI').length;
+    }
+
+    function repairOrderedListContinuations(editable) {
+      if (!editable) return;
+      editable.querySelectorAll('ol').forEach((orderedList) => {
+        let previous = orderedList.previousElementSibling;
+        let crossedBulletDetails = false;
+
+        while (previous?.tagName === 'UL') {
+          crossedBulletDetails = true;
+          previous = previous.previousElementSibling;
+        }
+
+        if (!crossedBulletDetails || previous?.tagName !== 'OL') return;
+
+        const previousStart = Math.max(1, Number.parseInt(previous.getAttribute('start') || '1', 10) || 1);
+        const previousCount = directListItemCount(previous);
+        if (!previousCount) return;
+
+        const expectedStart = Math.min(10000, previousStart + previousCount);
+        orderedList.setAttribute('start', String(expectedStart));
+      });
+    }
+
+
     function syncIdeaRichEditor(editor) {
       if (!editor?.editable || !editor?.textarea) return;
+      repairOrderedListContinuations(editor.editable);
       editor.textarea.value = sanitizeRichHtml(editor.editable.innerHTML);
     }
 
@@ -1356,6 +1387,7 @@
       const normalized = normalizeRichContent(value);
       if (editor?.editable) {
         editor.editable.innerHTML = normalized;
+        repairOrderedListContinuations(editor.editable);
         const clean = sanitizeRichHtml(editor.editable.innerHTML);
         editor.editable.innerHTML = clean || '<p><br></p>';
         if (textarea) textarea.value = clean;
@@ -1820,6 +1852,10 @@
           if (colspan > 1 && colspan <= 20) element.setAttribute('colspan', String(colspan));
           if (rowspan > 1 && rowspan <= 50) element.setAttribute('rowspan', String(rowspan));
         }
+        if (tag === 'OL') {
+          const start = Number.parseInt(sourceElement.getAttribute('start') || '1', 10);
+          if (Number.isFinite(start) && start > 1 && start <= 10000) element.setAttribute('start', String(start));
+        }
         if (['P','DIV','H1','H2','H3','BLOCKQUOTE','TH','TD'].includes(tag)) {
           const style = sourceElement.getAttribute('style') || '';
           const match = style.match(/text-align\s*:\s*(left|center|right|justify)/i);
@@ -1875,6 +1911,7 @@
       const normalized = normalizeRichContent(value);
       if (editable) {
         editable.innerHTML = normalized;
+        repairOrderedListContinuations(editable);
         const clean = sanitizeRichHtml(editable.innerHTML);
         editable.innerHTML = clean || '<p><br></p>';
         if (textarea) textarea.value = clean;
@@ -1888,6 +1925,7 @@
       const editable = getMyNoteRichEditable();
       const textarea = $('myNoteContent');
       if (!editable || !textarea) return;
+      repairOrderedListContinuations(editable);
       textarea.value = sanitizeRichHtml(editable.innerHTML);
     }
 
