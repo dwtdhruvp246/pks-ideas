@@ -161,3 +161,10 @@ To also test the supplied Excel file through the upload handler, set `BULK_TEST_
 - Amounts and quantities sort numerically, saved dates sort chronologically, and text uses natural order. Unselected calculator rows with blank costs stay last when sorting costs. Sorting preserves selections, quantities, totals and saved snapshots.
 - Saved Price Lists now shows the actual item count in its Items column and supports sorting by that count.
 - PWA cache is `pks-ideas-v34`. Reload the website or restart the PWA after deployment to receive these controls.
+
+## v35 Live search across costing tables
+
+- Items, Cost Calculator and saved-list item details filter immediately by item name, supplier and colour. Search is case-insensitive and accepts multiple words, such as `PETG black`.
+- Saved Price Lists filters immediately by list name and notes. Match counts and clear empty-state messages appear above the tables.
+- Searching retains active sorts, selected items and quantities. Calculator totals, saving and exports include all selected items; a message identifies selected items hidden by the current search. Saved snapshots remain unchanged.
+- PWA cache is `pks-ideas-v35`. Reload the website or restart the PWA after deployment to receive live search.
