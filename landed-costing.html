@@ -2,6 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pks Ideas · Landed Costing</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{font-family:Inter,system-ui,sans-serif;color:#1e2431;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:wait}.hide{display:none!important}.shell{max-width:1370px;margin:auto;padding:22px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.top h1{font-size:24px;margin:10px 0 4px}.muted{color:#657083;font-size:13px}.brand{color:#5146bd;font-weight:800;text-decoration:none}.btn{border:1px solid #dce0eb;background:#fff;border-radius:9px;padding:10px 14px;color:#263249;font-weight:650}.btn.primary{background:#5b5bd6;color:white;border-color:#5b5bd6}.btn.danger{color:#b91c1c}.btn:hover{filter:brightness(.97)}.tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid #ddd;margin:22px 0}.tabs button{border:none;border-bottom:3px solid transparent;background:transparent;padding:13px;color:#5b6475;font-weight:700}.tabs button.on{color:#5146bd;border-color:#5b5bd6}.card{background:#fff;border:1px solid #e2e6ef;border-radius:15px;padding:18px;margin:12px 0;box-shadow:0 4px 16px #17203908}.split{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.field label{display:block;font-size:12px;color:#4b5668;font-weight:750;margin-bottom:6px}.field input,.field textarea{width:100%;border:1px solid #d2d9e5;border-radius:9px;padding:11px;background:#fff;outline-color:#6969dc}.field input[type=checkbox]{width:20px;height:20px}.tablewrap{overflow:auto;width:100%}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #e8ebf1;padding:10px 9px;text-align:left;vertical-align:middle;white-space:nowrap}th{background:#f7f8fc;color:#535e6e;font-size:11px;text-transform:uppercase;letter-spacing:.035em}tfoot{font-weight:800;background:#f0f0fc}td input[type=number]{width:86px;padding:8px;border:1px solid #d2d9e5;border-radius:7px}td input[type=checkbox]{width:18px;height:18px}.actions{display:flex;gap:7px;flex-wrap:wrap}.notice{font-size:13px;min-height:22px;color:#526071;margin:10px 0}.notice.error{color:#c21c1c}.notice.ok{color:#137a48}.totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.totalbox{padding:15px;border-radius:11px;background:#f4f5ff}.totalbox strong{font-size:21px;display:block;margin-top:4px}.login{max-width:400px;margin:10vh auto;padding:25px}.section-title{margin:0 0 8px}.tier-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin:8px 0}.tier-row input{width:100%;padding:9px;border:1px solid #d2d9e5;border-radius:8px}.hint{font-size:12px;color:#657083}.empty{text-align:center;color:#657083;padding:25px}dialog{border:1px solid #e4e7f0;border-radius:14px;max-width:min(600px,94vw);width:100%;box-shadow:0 20px 60px #11182733}dialog::backdrop{background:#1e243169}@media(max-width:780px){.grid,.grid.three,.totals{grid-template-columns:1fr}.shell{padding:12px}.card{padding:12px}.tier-row{grid-template-columns:1fr 1fr}.tier-row .btn{grid-column:span 2}.top h1{font-size:20px}}@media print{.noprint,.tabs,.top .actions,button,input[type=checkbox]{display:none!important}body{background:#fff}.card{box-shadow:none;border:0}.shell{max-width:none}th,td{white-space:normal}}
 </style></head>
@@ -11,7 +12,7 @@
 <header class="top noprint"><div><a class="brand" href="./index.html">← Pks Ideas</a><h1>Landed Costing</h1><span class="muted">Supplier prices · Shipping · Saved price lists</span></div><div class="actions"><button class="btn" id="logout">Sign out</button></div></header>
 <nav class="tabs noprint" aria-label="Costing workspace"><button class="on" data-tab="items">Items</button><button data-tab="calculator">Cost Calculator</button><button data-tab="saved">Saved Price Lists</button><button data-tab="settings">Settings</button></nav>
 <p id="msg" class="notice" role="status"></p>
-<section id="items" class="page"><div class="split noprint"><div><h2>Items</h2><p class="muted">Catalogue of products and quantity-based prices</p></div><button class="btn primary" id="newItem">＋ Add item</button></div><div class="card"><div class="field noprint"><label>Search name or supplier</label><input id="itemSearch" placeholder="Search..."></div><div class="tablewrap"><table><thead><tr><th>Name</th><th>Supplier</th><th>Colour</th><th>Base unit price</th><th>Local shipping</th><th>Units/carton</th><th>CBM/carton</th><th class="noprint">Actions</th></tr></thead><tbody id="itemRows"></tbody></table></div></div></section>
+<section id="items" class="page"><div class="split noprint"><div><h2>Items</h2><p class="muted">Catalogue of products and quantity-based prices</p></div><div class="actions"><button class="btn" id="downloadTemplate" type="button">↓ Download Excel template</button><button class="btn" id="uploadTemplate" type="button">↑ Upload Excel</button><input id="bulkFile" class="hide" type="file" accept=".xlsx,.xls" aria-label="Upload filled Excel template"><button class="btn primary" id="newItem">＋ Add item</button></div></div><div class="card"><div class="field noprint"><label>Search name or supplier</label><input id="itemSearch" placeholder="Search..."></div><div class="tablewrap"><table><thead><tr><th>Name</th><th>Supplier</th><th>Colour</th><th>Base unit price</th><th>Local shipping</th><th>Units/carton</th><th>CBM/carton</th><th class="noprint">Actions</th></tr></thead><tbody id="itemRows"></tbody></table></div></div></section>
 <section id="calculator" class="page hide"><div class="split"><div><h2>Cost Calculator</h2><p class="muted">Select items and enter quantities. Saved lists are fixed historical snapshots.</p></div><button class="btn noprint" id="clearCalc">Clear selection</button></div><div class="card grid noprint"><div class="field"><label>Fee percentage (%)</label><input id="calcFee" type="number" step=".01" min="0" max="100"></div><div class="field"><label>International shipping rate ($ per CBM) — editable for this calculation</label><input id="calcRate" type="number" step=".01" min="0"></div></div><div class="card"><div class="tablewrap"><table><thead><tr><th class="noprint">Select</th><th>Item</th><th>Supplier</th><th>Colour</th><th>Qty</th><th>Unit price</th><th>Local shipping</th><th>Cost price</th><th>Fees</th><th>Cartons</th><th>CBM</th><th>Intl shipping</th><th>Total cost</th><th>Cost/unit</th></tr></thead><tbody id="calcRows"></tbody><tfoot id="calcFoot"></tfoot></table></div></div><div class="totals"><div class="totalbox">Total landed cost<strong id="totalCost">$0.00</strong></div><div class="totalbox">Total cartons<strong id="totalCartons">0</strong></div><div class="totalbox">Total CBM<strong id="totalCbm">0.0000</strong></div></div><div class="actions noprint" style="margin-top:18px"><button class="btn primary" id="saveList">Save list</button><button class="btn" id="exportCalc">Export CSV</button><button class="btn" id="printCalc">Print</button></div></section>
 <section id="saved" class="page hide"><div class="split"><h2>Saved Price Lists</h2><button class="btn noprint" id="refreshLists">Refresh</button></div><div class="card"><div class="tablewrap"><table><thead><tr><th>Name</th><th>Date</th><th>Items</th><th>Cartons</th><th>CBM</th><th>Total</th><th class="noprint">Actions</th></tr></thead><tbody id="savedRows"></tbody></table></div></div><div class="card hide" id="savedDetail"><div class="split"><div><h3 id="savedTitle"></h3><p id="savedMeta" class="muted"></p></div><div class="actions noprint"><button id="duplicateList" class="btn">Duplicate &amp; recalculate</button><button id="exportSaved" class="btn">Export CSV</button><button class="btn" onclick="window.print()">Print</button><button class="btn" id="closeSaved">Close</button></div></div><p id="savedNotes" class="muted"></p><div class="tablewrap"><table><thead><tr><th>Item</th><th>Supplier</th><th>Colour</th><th>Qty</th><th>Unit price</th><th>Cost</th><th>Fees</th><th>Cartons</th><th>CBM</th><th>Shipping</th><th>Total</th><th>Cost/unit</th></tr></thead><tbody id="savedLines"></tbody></table></div></div></section>
 <section id="settings" class="page hide"><h2>Costing Settings</h2><form id="settingsForm" class="card grid"><div class="field"><label>Default fee percentage (%)</label><input id="defaultFee" type="number" step=".01" min="0" max="100" required></div><div class="field"><label>Default international shipping per CBM ($)</label><input id="defaultRate" type="number" step=".01" min="0" required></div><div><button class="btn primary">Save defaults</button></div></form><p class="hint">These defaults fill new calculations. You can override them in any calculation; saved lists keep their original rates.</p></section>
@@ -39,6 +40,86 @@ async function loadItems(){const a=await query('landed_items',q=>q.select('*').o
 function renderItems(){const key=$('itemSearch').value.toLowerCase().trim();const filtered=items.filter(i=>(i.name+' '+i.supplier).toLowerCase().includes(key));$('itemRows').innerHTML=filtered.map(i=>'<tr><td>'+esc(i.name)+'</td><td>'+esc(i.supplier)+'</td><td>'+esc(i.colour)+'</td><td>'+usd(i.base_price)+'</td><td>'+usd(i.local_shipping)+'</td><td>'+i.units_per_carton+'</td><td>'+fixed(i.carton_length_cm*i.carton_width_cm*i.carton_height_cm/1e6)+'</td><td class="noprint actions"><button class="btn" data-edit="'+i.id+'">Edit</button><button class="btn danger" data-delete="'+i.id+'">Delete</button></td></tr>').join('')||'<tr><td colspan="8" class="empty">No items found.</td></tr>'}
 $('itemSearch').oninput=renderItems;
 $('itemRows').onclick=async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit)openItem(items.find(x=>x.id===edit.dataset.edit));if(del){const i=items.find(x=>x.id===del.dataset.delete);if(!confirm('Delete '+i.name+'? Saved price lists will be kept.'))return;try{await query('landed_items',q=>q.delete().eq('id',i.id));selected.delete(i.id);await loadItems();notice('Item deleted.')}catch(err){notice(err.message,true)}}};
+
+const BULK_HEADERS=['Item Name','Supplier','Colour','Base Price (USD)','Local Shipping (USD)','Units Per Carton','Carton Length (cm)','Carton Width (cm)','Carton Height (cm)','Tier From Qty','Tier To Qty','Tier Unit Price (USD)'];
+function excelReady(){if(!window.XLSX)throw Error('Excel support could not load. Check your internet connection and refresh this page.')}
+function workbookDownload(){
+ excelReady();
+ const demo=[['Sample Item','Sample Supplier','Black',5,12,20,50,40,35,1,19,5],['Sample Item','Sample Supplier','Black',5,12,20,50,40,35,20,39,4.5],['Sample Item','Sample Supplier','Black',5,12,20,50,40,35,40,'',4]];
+ const wb=XLSX.utils.book_new(), sheet=XLSX.utils.aoa_to_sheet([BULK_HEADERS,...demo]);
+ sheet['!cols']=BULK_HEADERS.map((h,i)=>({wch:i<3?23:Math.max(17,h.length+2)}));
+ XLSX.utils.book_append_sheet(wb,sheet,'Items');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['HOW TO USE'],['Each item uses one row, or several consecutive rows for multiple quantity tiers.'],['Repeat the same Item Name, Supplier, Colour and other item information on each tier row.'],['Leave Tier From Qty, Tier To Qty and Tier Unit Price blank if this item has no quantity tiers.'],['Leave Tier To Qty blank for the last, open-ended tier.'],['Remove the sample rows before entering your own data.'],['Every item must have Item Name, Base Price, Local Shipping, Units Per Carton and carton dimensions.'],['The importer validates all rows and skips items already present with the same name, supplier and colour.']]),'Instructions');
+ XLSX.writeFile(wb,'pks-landed-costing-items-template.xlsx');
+}
+function parseBulkSheet(sheet){
+ const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:true});
+ if(!rows.length)throw Error('The spreadsheet is empty.');
+ const header=rows.shift().map(x=>String(x??'').trim());
+ if(BULK_HEADERS.some((h,i)=>header[i]!==h))throw Error('Template headings do not match. Please download the latest template and keep its headings unchanged.');
+ const groups=new Map(),errs=[];
+ rows.forEach((r,i)=>{
+   if(r.every(v=>String(v??'').trim()===''))return;
+   const line=i+2;
+   try{
+     const str=n=>String(r[n]??'').trim(),num=(n,label,min=0)=>{if(str(n)==='')throw Error(label+' is required');return number(str(n),label,min)};
+     const name=str(0),supplier=str(1),colour=str(2);
+     if(!name)throw Error('Item Name is required');
+     const info={name,supplier,colour,base_price:num(3,'Base Price'),local_shipping:num(4,'Local Shipping'),units_per_carton:integer(str(5),'Units Per Carton',1),carton_length_cm:num(6,'Carton Length'),carton_width_cm:num(7,'Carton Width'),carton_height_cm:num(8,'Carton Height')};
+     if(name.length>180)throw Error('Item Name must be 180 characters or fewer');
+     const key=[name,supplier,colour].map(s=>s.toLocaleLowerCase()).join('\u001f');
+     if(!groups.has(key))groups.set(key,{item:info,priceTiers:[],row:line});
+     const group=groups.get(key);
+     for(const k of Object.keys(info))if(group.item[k]!==info[k])throw Error('Repeated item details differ from row '+group.row+'. Keep item fields identical across tiers.');
+     const hasTier=[9,10,11].some(n=>str(n)!=='');
+     if(hasTier){
+       const from=integer(str(9),'Tier From Qty',1),to=str(10)===''?null:integer(str(10),'Tier To Qty',1),unit_price=num(11,'Tier Unit Price');
+       if(to!==null&&to<from)throw Error('Tier To Qty cannot be less than From Qty');
+       group.priceTiers.push({min_qty:from,max_qty:to,unit_price});
+     }
+   }catch(e){errs.push('Row '+line+': '+e.message)}
+ });
+ for(const g of groups.values()){
+  const a=g.priceTiers.sort((x,y)=>x.min_qty-y.min_qty);
+  for(let i=1;i<a.length;i++)if(a[i-1].max_qty===null||a[i].min_qty<=a[i-1].max_qty)errs.push('Row '+g.row+': quantity tiers overlap or an open-ended tier is not last');
+ }
+ if(errs.length)throw Error('Import not started. Fix these issues:\n'+errs.slice(0,12).join('\n')+(errs.length>12?'\n… and '+(errs.length-12)+' more.':''));
+ if(!groups.size)throw Error('No item rows found in the template.');
+ return [...groups.values()];
+}
+$('downloadTemplate').onclick=()=>{try{workbookDownload();notice('Excel template downloaded. Fill in the Items sheet and upload it here.')}catch(e){notice(e.message,true)}};
+$('uploadTemplate').onclick=()=>$('bulkFile').click();
+$('bulkFile').onchange=async e=>{
+ const file=e.target.files?.[0];e.target.value='';if(!file)return;
+ const btn=$('uploadTemplate');btn.disabled=true;notice('Validating Excel import...');
+ try{
+  excelReady();
+  const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});
+  if(!wb.Sheets.Items)throw Error('Missing Items sheet. Use the downloaded template.');
+  const parsed=parseBulkSheet(wb.Sheets.Items);
+  const existing=new Set(items.map(i=>[i.name,i.supplier,i.colour].map(s=>String(s??'').toLocaleLowerCase()).join('\u001f')));
+  const fresh=parsed.filter(g=>!existing.has([g.item.name,g.item.supplier,g.item.colour].map(s=>s.toLocaleLowerCase()).join('\u001f')));
+  const skipped=parsed.length-fresh.length;
+  if(!fresh.length){notice('Nothing imported: all '+skipped+' items already exist (same name, supplier and colour).');return}
+  if(!confirm('Import '+fresh.length+' new items with '+fresh.reduce((n,g)=>n+g.priceTiers.length,0)+' quantity tiers?'+(skipped?'\n'+skipped+' matching items will be skipped.':'')+'\n\nPlease confirm.')){notice('Import cancelled.');return}
+  let inserted=0;const failures=[];
+  for(const g of fresh){
+   let id=null;
+   try{
+    const created=await query('landed_items',q=>q.insert(g.item).select('id').single());id=created.id;
+    if(g.priceTiers.length)await query('landed_price_tiers',q=>q.insert(g.priceTiers.map(t=>({...t,item_id:id}))));
+    inserted++;
+   }catch(err){
+    if(id)await db.from('landed_items').delete().eq('id',id);
+    failures.push(g.item.name+': '+err.message);
+   }
+  }
+  await loadItems();
+  notice('Imported '+inserted+' item(s). Skipped existing: '+skipped+'. Failed: '+failures.length+'.'+(failures.length?' '+failures.slice(0,3).join('; '):''),Boolean(failures.length));
+ }catch(err){notice(err.message,true);alert(err.message)}
+ finally{btn.disabled=false}
+};
+
 function addTierRow(t={}){const row=document.createElement('div');row.className='tier-row';row.innerHTML='<input type="number" min="1" step="1" placeholder="From qty" aria-label="From quantity" class="from" value="'+esc(t.min_qty??'')+'"><input type="number" min="1" step="1" placeholder="To (blank=∞)" aria-label="To quantity" class="to" value="'+esc(t.max_qty??'')+'"><input type="number" min="0" step=".0001" placeholder="Unit price" aria-label="Tier unit price" class="price" value="'+esc(t.unit_price??'')+'"><button type="button" class="btn danger">Remove</button>';row.querySelector('button').onclick=()=>row.remove();$('tierRows').append(row)}
 function openItem(i=null){currentEdit=i?.id||null;$('itemDialogTitle').textContent=i?'Edit item':'Add item';$('itemForm').reset();for(const [key,value]of Object.entries({name:'',supplier:'',colour:'',base_price:0,local_shipping:0,units_per_carton:1,carton_length_cm:0,carton_width_cm:0,carton_height_cm:0,...i})){const field=$('itemForm').elements.namedItem(key);if(field)field.value=value??''}$('tierRows').replaceChildren();tiers.filter(t=>t.item_id===i?.id).sort((a,b)=>a.min_qty-b.min_qty).forEach(addTierRow);updateCbm();$('itemDialog').showModal()}
 function updateCbm(){const f=$('itemForm');$('formCbm').textContent=fixed((Number(f.elements.namedItem('carton_length_cm').value)||0)*(Number(f.elements.namedItem('carton_width_cm').value)||0)*(Number(f.elements.namedItem('carton_height_cm').value)||0)/1e6)}
