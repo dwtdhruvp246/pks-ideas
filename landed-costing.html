@@ -49,7 +49,7 @@ function workbookDownload(){
  const wb=XLSX.utils.book_new(), sheet=XLSX.utils.aoa_to_sheet([BULK_HEADERS,...demo]);
  sheet['!cols']=BULK_HEADERS.map((h,i)=>({wch:i<3?23:Math.max(17,h.length+2)}));
  XLSX.utils.book_append_sheet(wb,sheet,'Items');
- XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['HOW TO USE'],['Each item uses one row, or several consecutive rows for multiple quantity tiers.'],['Repeat the same Item Name, Supplier, Colour and other item information on each tier row.'],['Leave Tier From Qty, Tier To Qty and Tier Unit Price blank if this item has no quantity tiers.'],['Leave Tier To Qty blank for the last, open-ended tier.'],['Remove the sample rows before entering your own data.'],['Every item must have Item Name, Base Price, Local Shipping, Units Per Carton and carton dimensions.'],['The importer validates all rows and skips items already present with the same name, supplier and colour.']]),'Instructions');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['HOW TO USE'],['Each item uses one row, or several consecutive rows for multiple quantity tiers.'],['Repeat the same Item Name, Supplier, Colour and other item information on each tier row.'],['Leave Tier From Qty, Tier To Qty and Tier Unit Price blank if this item has no quantity tiers.'],['Leave Tier To Qty blank for the last, open-ended tier.'],['Remove the sample rows before entering your own data.'],['Every item must have Item Name, Base Price, Local Shipping, Units Per Carton and carton dimensions.'],['Currency values may be plain numbers or contain $ and comma thousands separators.'],['The importer validates all rows and skips items already present with the same name, supplier and colour.']]),'Instructions');
  XLSX.writeFile(wb,'pks-landed-costing-items-template.xlsx');
 }
 function parseBulkSheet(sheet){
@@ -62,10 +62,10 @@ function parseBulkSheet(sheet){
    if(r.every(v=>String(v??'').trim()===''))return;
    const line=i+2;
    try{
-     const str=n=>String(r[n]??'').trim(),num=(n,label,min=0)=>{if(str(n)==='')throw Error(label+' is required');return number(str(n),label,min)};
+     const str=n=>String(r[n]??'').trim(),num=(n,label,min=0)=>{const raw=str(n);if(raw==='')throw Error(label+' is required');const cleaned=raw.replace(/[\u00a0\u202f\s]/g,'').replace(/^US\$/i,'').replace(/^USD/i,'').replace(/^\$/,'');if(!/^(?:\d+(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)$/.test(cleaned))throw Error(label+' must be a valid non-negative number (found: '+raw.slice(0,35)+')');const val=Number(cleaned.replace(/,/g,''));if(!Number.isFinite(val)||val<min)throw Error(label+' must be at least '+min+' (found: '+raw.slice(0,35)+')');return val};
      const name=str(0),supplier=str(1),colour=str(2);
      if(!name)throw Error('Item Name is required');
-     const info={name,supplier,colour,base_price:num(3,'Base Price'),local_shipping:num(4,'Local Shipping'),units_per_carton:integer(str(5),'Units Per Carton',1),carton_length_cm:num(6,'Carton Length'),carton_width_cm:num(7,'Carton Width'),carton_height_cm:num(8,'Carton Height')};
+     const info={name,supplier,colour,base_price:num(3,'Base Price'),local_shipping:num(4,'Local Shipping'),units_per_carton:integer(num(5,'Units Per Carton',1),'Units Per Carton',1),carton_length_cm:num(6,'Carton Length'),carton_width_cm:num(7,'Carton Width'),carton_height_cm:num(8,'Carton Height')};
      if(name.length>180)throw Error('Item Name must be 180 characters or fewer');
      const key=[name,supplier,colour].map(s=>s.toLocaleLowerCase()).join('\u001f');
      if(!groups.has(key))groups.set(key,{item:info,priceTiers:[],row:line});
@@ -73,7 +73,7 @@ function parseBulkSheet(sheet){
      for(const k of Object.keys(info))if(group.item[k]!==info[k])throw Error('Repeated item details differ from row '+group.row+'. Keep item fields identical across tiers.');
      const hasTier=[9,10,11].some(n=>str(n)!=='');
      if(hasTier){
-       const from=integer(str(9),'Tier From Qty',1),to=str(10)===''?null:integer(str(10),'Tier To Qty',1),unit_price=num(11,'Tier Unit Price');
+       const from=integer(num(9,'Tier From Qty',1),'Tier From Qty',1),to=str(10)===''?null:integer(num(10,'Tier To Qty',1),'Tier To Qty',1),unit_price=num(11,'Tier Unit Price');
        if(to!==null&&to<from)throw Error('Tier To Qty cannot be less than From Qty');
        group.priceTiers.push({min_qty:from,max_qty:to,unit_price});
      }
