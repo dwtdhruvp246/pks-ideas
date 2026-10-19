@@ -133,3 +133,18 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - **Required one-time setup:** open [landed-costing.sql](./landed-costing.sql), copy into the existing Pks Ideas Supabase project's SQL Editor and execute. This is a separate migration: **do not rerun the whole existing supabase.sql**.
 - No additional Supabase client credentials or sign-up settings are needed: the existing Pks Ideas authenticated session is reused.
 - After deployment, reload the website or restart the PWA to install cache v29.
+
+## v32 Landed Costing Excel duplicate handling
+
+- Item identity uses the full name, supplier and colour together (trimmed and case-insensitive). Different names can use the same colour and quantity ranges. The parser and existing-catalogue check share this identity rule.
+- Identical repeated tier rows count once after all item details have been checked. Different prices for the same range, inconsistent item details and genuine quantity overlaps still stop the upload before any writes. Errors identify the item and both overlapping source rows.
+- The supplied 376-row workbook contains exact repeats of PETG/Brown (rows 16 and 19) and PLA/Brown (rows 111 and 114). Previously their repeated open-ended tiers caused the overlap error. It now parses to 374 items with 374 tiers; reimporting skips existing items.
+- PWA cache is `pks-ideas-v32`. Reload the website or restart the PWA after deployment to receive the fix.
+
+Run the importer regression suite with Node.js:
+
+```sh
+node --test tests/landed-costing-import.test.cjs
+```
+
+To also test the supplied Excel file through the upload handler, set `BULK_TEST_WORKBOOK` to its path and `BULK_TEST_XLSX` to a local copy of the page's SheetJS 0.18.5 bundle, then run the same command. The suite uses an isolated database adapter and never writes to a live catalogue. Without these variables, the workbook-specific check is skipped.

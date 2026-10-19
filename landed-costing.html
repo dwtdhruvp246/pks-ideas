@@ -42,6 +42,8 @@ $('itemSearch').oninput=renderItems;
 $('itemRows').onclick=async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit)openItem(items.find(x=>x.id===edit.dataset.edit));if(del){const i=items.find(x=>x.id===del.dataset.delete);if(!confirm('Delete '+i.name+'? Saved price lists will be kept.'))return;try{await query('landed_items',q=>q.delete().eq('id',i.id));selected.delete(i.id);await loadItems();notice('Item deleted.')}catch(err){notice(err.message,true)}}};
 
 const BULK_HEADERS=['Item Name','Supplier','Colour','Base Price (USD)','Local Shipping (USD)','Units Per Carton','Carton Length (cm)','Carton Width (cm)','Carton Height (cm)','Tier From Qty','Tier To Qty','Tier Unit Price (USD)'];
+// Share the full item identity between tier grouping and existing-item checks.
+function bulkItemKey(item){return JSON.stringify([item.name,item.supplier,item.colour].map(s=>String(s??'').trim().toLowerCase()))}
 function excelReady(){if(!window.XLSX)throw Error('Excel support could not load. Check your internet connection and refresh this page.')}
 function workbookDownload(){
  excelReady();
@@ -49,7 +51,7 @@ function workbookDownload(){
  const wb=XLSX.utils.book_new(), sheet=XLSX.utils.aoa_to_sheet([BULK_HEADERS,...demo]);
  sheet['!cols']=BULK_HEADERS.map((h,i)=>({wch:i<3?23:Math.max(17,h.length+2)}));
  XLSX.utils.book_append_sheet(wb,sheet,'Items');
- XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['HOW TO USE'],['Each item uses one row, or several consecutive rows for multiple quantity tiers.'],['Repeat the same Item Name, Supplier, Colour and other item information on each tier row.'],['Leave Tier From Qty, Tier To Qty and Tier Unit Price blank if this item has no quantity tiers.'],['Leave Tier To Qty blank for the last, open-ended tier.'],['Remove the sample rows before entering your own data.'],['Every item must have Item Name, Base Price, Local Shipping, Units Per Carton and carton dimensions.'],['Currency values may be plain numbers or contain $ and comma thousands separators.'],['The importer validates all rows and skips items already present with the same name, supplier and colour.']]),'Instructions');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['HOW TO USE'],['Each item uses one row, or several consecutive rows for multiple quantity tiers.'],['Repeat the same Item Name, Supplier, Colour and other item information on each tier row.'],['Different item names may share the same colour. Items are matched by name, supplier and colour together.'],['Identical repeated rows are counted once. Conflicting item details, prices or overlapping quantity tiers must be corrected.'],['Leave Tier From Qty, Tier To Qty and Tier Unit Price blank if this item has no quantity tiers.'],['Leave Tier To Qty blank for the last, open-ended tier.'],['Remove the sample rows before entering your own data.'],['Every item must have Item Name, Base Price, Local Shipping, Units Per Carton and carton dimensions.'],['Currency values may be plain numbers or contain $ and comma thousands separators.'],['The importer validates all rows and skips items already present with the same name, supplier and colour.']]),'Instructions');
  XLSX.writeFile(wb,'pks-landed-costing-items-template.xlsx');
 }
 function parseBulkSheet(sheet){
@@ -57,7 +59,7 @@ function parseBulkSheet(sheet){
  if(!rows.length)throw Error('The spreadsheet is empty.');
  const header=rows.shift().map(x=>String(x??'').trim());
  if(BULK_HEADERS.some((h,i)=>header[i]!==h))throw Error('Template headings do not match. Please download the latest template and keep its headings unchanged.');
- const groups=new Map(),errs=[];
+ const groups=new Map(),errs=[],tierRows=new WeakMap();
  rows.forEach((r,i)=>{
    if(r.every(v=>String(v??'').trim()===''))return;
    const line=i+2;
@@ -67,7 +69,7 @@ function parseBulkSheet(sheet){
      if(!name)throw Error('Item Name is required');
      const info={name,supplier,colour,base_price:num(3,'Base Price'),local_shipping:num(4,'Local Shipping'),units_per_carton:integer(num(5,'Units Per Carton',1),'Units Per Carton',1),carton_length_cm:num(6,'Carton Length'),carton_width_cm:num(7,'Carton Width'),carton_height_cm:num(8,'Carton Height')};
      if(name.length>180)throw Error('Item Name must be 180 characters or fewer');
-     const key=[name,supplier,colour].map(s=>s.toLocaleLowerCase()).join('\u001f');
+     const key=bulkItemKey(info);
      if(!groups.has(key))groups.set(key,{item:info,priceTiers:[],row:line});
      const group=groups.get(key);
      for(const k of Object.keys(info))if(group.item[k]!==info[k])throw Error('Repeated item details differ from row '+group.row+'. Keep item fields identical across tiers.');
@@ -75,13 +77,18 @@ function parseBulkSheet(sheet){
      if(hasTier){
        const from=integer(num(9,'Tier From Qty',1),'Tier From Qty',1),to=str(10)===''?null:integer(num(10,'Tier To Qty',1),'Tier To Qty',1),unit_price=num(11,'Tier Unit Price');
        if(to!==null&&to<from)throw Error('Tier To Qty cannot be less than From Qty');
-       group.priceTiers.push({min_qty:from,max_qty:to,unit_price});
+       // Repeated spreadsheet rows are harmless only when details AND tier match.
+       // Different prices for the same range still reach the overlap validation.
+       if(!group.priceTiers.some(t=>t.min_qty===from&&t.max_qty===to&&t.unit_price===unit_price)){
+         const tier={min_qty:from,max_qty:to,unit_price};
+         group.priceTiers.push(tier);tierRows.set(tier,line);
+       }
      }
    }catch(e){errs.push('Row '+line+': '+e.message)}
  });
  for(const g of groups.values()){
   const a=g.priceTiers.sort((x,y)=>x.min_qty-y.min_qty);
-  for(let i=1;i<a.length;i++)if(a[i-1].max_qty===null||a[i].min_qty<=a[i-1].max_qty)errs.push('Row '+g.row+': quantity tiers overlap or an open-ended tier is not last');
+  for(let i=1;i<a.length;i++)if(a[i-1].max_qty===null||a[i].min_qty<=a[i-1].max_qty)errs.push('Row '+tierRows.get(a[i])+': quantity tiers overlap with row '+tierRows.get(a[i-1])+' for '+g.item.name+' ('+g.item.colour+'); an open-ended tier must be last');
  }
  if(errs.length)throw Error('Import not started. Fix these issues:\n'+errs.slice(0,12).join('\n')+(errs.length>12?'\n… and '+(errs.length-12)+' more.':''));
  if(!groups.size)throw Error('No item rows found in the template.');
@@ -97,8 +104,8 @@ $('bulkFile').onchange=async e=>{
   const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});
   if(!wb.Sheets.Items)throw Error('Missing Items sheet. Use the downloaded template.');
   const parsed=parseBulkSheet(wb.Sheets.Items);
-  const existing=new Set(items.map(i=>[i.name,i.supplier,i.colour].map(s=>String(s??'').toLocaleLowerCase()).join('\u001f')));
-  const fresh=parsed.filter(g=>!existing.has([g.item.name,g.item.supplier,g.item.colour].map(s=>s.toLocaleLowerCase()).join('\u001f')));
+  const existing=new Set(items.map(bulkItemKey));
+  const fresh=parsed.filter(g=>!existing.has(bulkItemKey(g.item)));
   const skipped=parsed.length-fresh.length;
   if(!fresh.length){notice('Nothing imported: all '+skipped+' items already exist (same name, supplier and colour).');return}
   if(!confirm('Import '+fresh.length+' new items with '+fresh.reduce((n,g)=>n+g.priceTiers.length,0)+' quantity tiers?'+(skipped?'\n'+skipped+' matching items will be skipped.':'')+'\n\nPlease confirm.')){notice('Import cancelled.');return}
