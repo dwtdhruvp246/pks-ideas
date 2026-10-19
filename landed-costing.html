@@ -21,8 +21,8 @@
 'use strict';
 // Same Supabase project and public anon key as Pks Ideas. Never put a service-role key here.
 const SUPABASE_URL='https://mevffvqrpsiiesfsutng.supabase.co';
-const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldmZmdnFycHNpaWVzZnN1dG5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMTczNSwiZXhwIjoyMTAxNTg3NzM1fQ.pN9QyfnEkrNBmzC3imq_YwgqO3E1lbCF5SuZQbyDPs4';
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldmZmdnFycHNpaWVzZnN1dG5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMTE3MzUsImV4cCI6MjEwMTU4NzczNX0.pN9QyfnEkrNBmzC3imq_YwgqO3E1lbCF5SuZQbyDPs4';
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 const usd=n=>'$'+(Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -72,7 +72,7 @@ function downloadCsv(rows,file){if(!rows.length){notice('Nothing to export.',tru
 $('exportCalc').onclick=()=>downloadCsv(calcResult,'landed-cost-calculation.csv');$('exportSaved').onclick=()=>{if(currentSaved)downloadCsv(currentSaved.lines,currentSaved.name.replace(/[^a-z0-9_-]+/gi,'-')+'.csv')};$('printCalc').onclick=()=>window.print();
 $('logout').onclick=async()=>{if(!maybeLeave())return;await db.auth.signOut();location.href='./index.html'};
 $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginMsg').textContent='Signing in...';const {error}=await db.auth.signInWithPassword({email:$('email').value,password:$('password').value});if(error){$('loginMsg').textContent=error.message;return}await init()};
-async function init(){const {data:{user:u}}=await db.auth.getUser();user=u;if(!user){$('login').classList.remove('hide');$('app').classList.add('hide');return}$('login').classList.add('hide');$('app').classList.remove('hide');notice('Loading workspace...');try{await Promise.all([loadItems(),loadSettings()]);notice('')}catch(err){notice('Setup needed: run landed-costing.sql in your Supabase SQL Editor. '+err.message,true)}}
+async function init(){const {data:{session},error:sessionError}=await db.auth.getSession();if(sessionError){$('loginMsg').textContent=sessionError.message}user=session?.user||null;if(user&&user.email?.toLowerCase()!=='dhruvp246@gmail.com'){await db.auth.signOut();user=null}if(!user){$('login').classList.remove('hide');$('app').classList.add('hide');return}$('login').classList.add('hide');$('app').classList.remove('hide');notice('Loading workspace...');try{await Promise.all([loadItems(),loadSettings()]);notice('')}catch(err){notice('Setup needed: run landed-costing.sql in your Supabase SQL Editor. '+err.message,true)}}
 window.addEventListener('beforeunload',e=>{if(calcDirty){e.preventDefault();e.returnValue=''}});
 init();
 </script></body></html>
