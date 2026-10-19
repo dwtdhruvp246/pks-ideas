@@ -121,3 +121,15 @@ This release adds guarded multi-device stale-data detection for open Idea pages.
 - Desktop toolbars keep the full control set visible.
 - Applies to My Notes, Idea Description, Private Notes, Checklist Details and Dashboard Notes.
 - No Supabase SQL changes are required.
+
+
+## v29 Landed Costing workspace
+
+- Separate **Landed Costing** workspace linked from the Pks Ideas sidebar, using the same Supabase Auth account.
+- Open [landed-costing.html](./landed-costing.html) to manage **Items**, **Cost Calculator**, **Saved Price Lists**, and **Settings**.
+- Items support multiple price tiers, local shipping per selected item order, units/carton and carton dimensions.
+- Costing applies fees to item purchase + local shipping only, and international freight to carton CBM. The international rate can differ per calculation.
+- Historical saved price lists store immutable monetary, shipping, dimension and carton snapshots; duplicate them to recalculate using current catalogue prices. CSV and print available.
+- **Required one-time setup:** open [landed-costing.sql](./landed-costing.sql), copy into the existing Pks Ideas Supabase project's SQL Editor and execute. This is a separate migration: **do not rerun the whole existing supabase.sql**.
+- No additional Supabase client credentials or sign-up settings are needed: the existing Pks Ideas authenticated session is reused.
+- After deployment, reload the website or restart the PWA to install cache v29.
