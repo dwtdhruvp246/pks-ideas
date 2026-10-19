@@ -148,3 +148,9 @@ node --test tests/landed-costing-import.test.cjs
 ```
 
 To also test the supplied Excel file through the upload handler, set `BULK_TEST_WORKBOOK` to its path and `BULK_TEST_XLSX` to a local copy of the page's SheetJS 0.18.5 bundle, then run the same command. The suite uses an isolated database adapter and never writes to a live catalogue. Without these variables, the workbook-specific check is skipped.
+
+## v33 Items table sorting
+
+- Click any data-column heading in Items to sort ascending; click again to sort descending. Arrows show the active direction. Text uses natural order, and prices, shipping, units/carton and calculated CBM/carton sort numerically.
+- Sorting stays active while searching and refreshing the catalogue during the current page session. Keyboard users can operate the heading buttons, and screen readers receive the current sort direction.
+- PWA cache is `pks-ideas-v33`. Reload the website or restart the PWA after deployment to receive the sort controls.
