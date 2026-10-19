@@ -154,3 +154,10 @@ To also test the supplied Excel file through the upload handler, set `BULK_TEST_
 - Click any data-column heading in Items to sort ascending; click again to sort descending. Arrows show the active direction. Text uses natural order, and prices, shipping, units/carton and calculated CBM/carton sort numerically.
 - Sorting stays active while searching and refreshing the catalogue during the current page session. Keyboard users can operate the heading buttons, and screen readers receive the current sort direction.
 - PWA cache is `pks-ideas-v33`. Reload the website or restart the PWA after deployment to receive the sort controls.
+
+## v34 Calculator and saved-list sorting
+
+- Cost Calculator, Saved Price Lists and the item details inside each saved list now have ascending/descending sort arrows on every data column. Each table retains its own sort during the current page session.
+- Amounts and quantities sort numerically, saved dates sort chronologically, and text uses natural order. Unselected calculator rows with blank costs stay last when sorting costs. Sorting preserves selections, quantities, totals and saved snapshots.
+- Saved Price Lists now shows the actual item count in its Items column and supports sorting by that count.
+- PWA cache is `pks-ideas-v34`. Reload the website or restart the PWA after deployment to receive these controls.
