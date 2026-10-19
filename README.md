@@ -168,3 +168,21 @@ To also test the supplied Excel file through the upload handler, set `BULK_TEST_
 - Saved Price Lists filters immediately by list name and notes. Match counts and clear empty-state messages appear above the tables.
 - Searching retains active sorts, selected items and quantities. Calculator totals, saving and exports include all selected items; a message identifies selected items hidden by the current search. Saved snapshots remain unchanged.
 - PWA cache is `pks-ideas-v35`. Reload the website or restart the PWA after deployment to receive live search.
+
+## v36 Item numbers, Clear search and bulk deletion
+
+- Item identity is **Supplier → Item Name → Item Number → Colour**, compared as trimmed, case-insensitive text. Any different component identifies another item. Item numbers are optional text, preserving leading zeros; different suppliers can reuse numbers.
+- Item numbers appear in Items, Cost Calculator, saved item details, search, sorting and CSV exports. New saved lists snapshot the number alongside other item details.
+- Excel templates append an optional **Item Number** column. Existing 12-column workbooks remain valid. Exact repeated rows still count once and conflicting tiers remain errors.
+- Every costing search has a Clear button that clears only its search text and restores its rows. Calculator quantities and selections remain intact.
+- Items has deletion checkboxes, select-all-visible, a selected count including hidden rows, Clear selection and Delete selected. A confirmation identifies hidden selected rows. Deletions use bounded batches, retain failed selections for retry and preserve historical saved price lists.
+- **Existing installation setup:** run [landed-costing-item-numbers.sql](./landed-costing-item-numbers.sql) once in the existing Supabase project's SQL Editor, then reload. This adds catalogue and snapshot fields plus a per-user unique index on the full identity. The migration never deletes or merges data and stops if duplicate identities already exist. The app keeps working with the old schema while item-number entry is disabled until migration.
+- Use [landed-costing.sql](./landed-costing.sql) for a fresh installation. Do not use it instead of the targeted migration on an existing installation.
+- PWA cache is `pks-ideas-v36`. Reload the website or restart the PWA after deployment.
+- The [shared-carton plan](./docs/mixed-cartons-plan.md) records same-supplier groups with dimensions and capacity entered when grouping. Shared-carton calculations are planned separately from this release.
+
+Regression checks:
+
+```sh
+node --test tests/landed-costing-import.test.cjs tests/landed-costing-controls.test.cjs
+```

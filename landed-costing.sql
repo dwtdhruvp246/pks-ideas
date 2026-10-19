@@ -7,6 +7,7 @@ create table if not exists public.landed_items (
  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
  name text not null check (length(trim(name)) between 1 and 180),
  supplier text not null default '',
+ item_number text not null default '' check (length(item_number) <= 80),
  colour text not null default '',
  base_price numeric(16,4) not null default 0 check (base_price >= 0),
  local_shipping numeric(16,4) not null default 0 check (local_shipping >= 0),
@@ -16,6 +17,9 @@ create table if not exists public.landed_items (
  carton_height_cm numeric(14,4) not null default 0 check (carton_height_cm >= 0),
  created_at timestamptz not null default now()
 );
+
+create unique index if not exists landed_items_identity_unique
+ on public.landed_items (user_id, lower(trim(supplier)), lower(trim(name)), lower(trim(item_number)), lower(trim(colour)));
 
 create table if not exists public.landed_price_tiers (
  id uuid primary key default gen_random_uuid(),
@@ -53,6 +57,7 @@ create table if not exists public.landed_cost_list_items (
  source_item_id uuid, -- intentionally no FK: historical lists survive catalogue deletion
  item_name text not null,
  supplier text not null default '',
+ item_number text not null default '' check (length(item_number) <= 80),
  colour text not null default '',
  quantity integer not null check (quantity >= 1),
  unit_price numeric(16,4) not null check (unit_price >= 0),
